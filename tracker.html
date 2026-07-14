@@ -213,6 +213,10 @@
   .meta-sub{ font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--text-faint); margin-top:2px; }
   .meta-col{ flex:1; text-align:right; font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--text-dim); flex-shrink:0; min-width:56px; }
   .meta-col.wr{ color:var(--accent); font-weight:600; }
+  .sortable-col{ transition:color .15s ease; }
+  .sortable-col:hover{ color:var(--accent); }
+  .sortable-col.active{ color:var(--accent); font-weight:600; }
+  .meta-row.clickable{ cursor:pointer; }
   .meta-bar-wrap{ flex:2; min-width:70px; }
   .meta-bar{ height:6px; border-radius:4px; background:rgba(255,255,255,0.07); overflow:hidden; }
   .meta-bar-fill{ height:100%; background:linear-gradient(90deg, var(--accent), rgba(var(--accent-rgb),0.6)); border-radius:4px; }
@@ -226,6 +230,32 @@
   .chip.active{ background:var(--accent); border-color:var(--accent); color:#0b0709; font-weight:600; box-shadow:0 0 14px rgba(var(--accent-rgb),0.4); }
   .filter-row{ display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 14px; }
 
+  /* ---------- ICON DROPDOWN (agent/map filters) ---------- */
+  .icon-select{ position:relative; }
+  .icon-select-btn{
+    display:flex; align-items:center; gap:9px; min-width:170px;
+    background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:9px; color:var(--text);
+    font-family:'Inter', sans-serif; font-size:13px; padding:8px 12px; cursor:pointer; text-align:left;
+    transition:border-color .2s ease;
+  }
+  .icon-select-btn:hover{ border-color:rgba(var(--accent-rgb),0.5); }
+  .icon-select.open .icon-select-btn{ border-color:var(--accent); }
+  .icon-select-icon{ width:22px; height:22px; border-radius:6px; flex-shrink:0; background:rgba(0,0,0,0.3); overflow:hidden; }
+  .icon-select-btn span:nth-child(2){ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .icon-select-chevron{ width:13px; height:13px; flex-shrink:0; color:var(--text-faint); transition:transform .2s ease; }
+  .icon-select.open .icon-select-chevron{ transform:rotate(180deg); }
+  .icon-select-menu{
+    position:absolute; top:calc(100% + 6px); left:0; min-width:210px; max-height:280px; overflow-y:auto;
+    background:rgba(var(--panel-rgb),0.98); border:1px solid var(--border); border-radius:12px;
+    box-shadow:0 14px 34px rgba(0,0,0,0.45); z-index:30; display:none; padding:6px;
+  }
+  .icon-select-menu.open{ display:block; animation:softFadeIn .15s ease; }
+  .icon-select-item{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:12.5px; color:var(--text-dim); }
+  .icon-select-item:hover{ background:rgba(255,255,255,0.06); color:var(--text); }
+  .icon-select-item.selected{ color:var(--accent); background:rgba(var(--accent-rgb),0.1); }
+  .icon-select-item img{ width:22px; height:22px; border-radius:6px; object-fit:cover; flex-shrink:0; }
+  .icon-select-item .ph{ width:22px; height:22px; flex-shrink:0; }
+
   /* ---------- MATCH HISTORY ---------- */
   .match-row{
     display:flex; align-items:center; gap:14px; padding:14px 18px;
@@ -234,6 +264,8 @@
   }
   .match-row.win{ border-left-color:var(--win); }
   .match-row.loss{ border-left-color:var(--loss); }
+  .match-row.clickable{ cursor:pointer; }
+  .match-row.clickable:hover{ border-color:rgba(var(--accent-rgb),0.5); box-shadow:0 4px 18px rgba(0,0,0,0.3); transform:translateY(-1px); }
   .match-map{ width:52px; height:52px; border-radius:10px; background:rgba(0,0,0,0.3) center/cover no-repeat; flex-shrink:0; }
   .match-mid{ flex:1; min-width:0; }
   .match-mode{ font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--text-faint); }
@@ -298,6 +330,45 @@
   .best-map-badge img{ width:18px; height:18px; border-radius:4px; object-fit:cover; }
   .best-map-badge .wr{ color:var(--accent); font-weight:600; }
   .meta-col.small{ flex:0.7; min-width:70px; }
+
+  /* ---------- MATCH DETAIL MODAL ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(4,2,3,0.72); backdrop-filter:blur(4px);
+    z-index:100; display:none; align-items:flex-start; justify-content:center;
+    padding:40px 16px; overflow-y:auto;
+  }
+  .modal-overlay.open{ display:flex; animation:softFadeIn .2s ease; }
+  .modal-box{
+    width:100%; max-width:760px; background:rgba(var(--panel-rgb),0.97); border:1px solid var(--border);
+    border-radius:18px; box-shadow:0 20px 60px rgba(0,0,0,0.5); overflow:hidden; margin-bottom:40px;
+  }
+  .modal-head{
+    position:relative; padding:22px 26px; background:linear-gradient(120deg, rgba(var(--accent-rgb),0.28), rgba(var(--accent-rgb),0.04));
+  }
+  .modal-close{
+    position:absolute; top:16px; right:16px; width:30px; height:30px; border-radius:50%;
+    background:rgba(0,0,0,0.35); border:1px solid var(--border); color:var(--text); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:16px; line-height:1;
+  }
+  .modal-close:hover{ border-color:var(--accent); color:var(--accent); }
+  .modal-title{ font-family:'Sora', sans-serif; font-weight:700; font-size:19px; }
+  .modal-sub{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--text-dim); margin-top:6px; letter-spacing:0.5px; }
+  .modal-score{ font-family:'Sora', sans-serif; font-weight:800; font-size:26px; margin-top:10px; }
+  .modal-score.win{ color:var(--win); } .modal-score.loss{ color:var(--loss); }
+  .modal-body{ padding:18px 22px 26px; }
+  .modal-team-label{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--text-faint); margin:18px 0 8px 2px; display:flex; align-items:center; gap:8px;
+  }
+  .modal-team-label:first-child{ margin-top:0; }
+  .modal-team-label .side-tag{ padding:1px 8px; border-radius:20px; font-size:9.5px; }
+  .modal-team-label .side-tag.mine{ background:rgba(var(--accent-rgb),0.18); color:var(--accent); }
+  .mp-row{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; font-size:12.5px; }
+  .mp-row.me{ background:rgba(var(--accent-rgb),0.1); }
+  .mp-row .mp-avatar{ width:30px; height:30px; border-radius:8px; flex-shrink:0; background:rgba(0,0,0,0.3) center/cover no-repeat; }
+  .mp-row .mp-name{ flex:2; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+  .mp-row .mp-col{ flex:1; text-align:right; font-family:'IBM Plex Mono', monospace; color:var(--text-dim); min-width:44px; }
+  @media (max-width:560px){ .mp-row .mp-col.hide-sm{ display:none; } }
 
   /* ---------- SEARCH ---------- */
   .search-row{ display:flex; gap:10px; flex-wrap:wrap; }
@@ -451,8 +522,24 @@
           <h1>Последние матчи</h1>
         </div>
         <div class="filter-row">
-          <select class="settings-input" id="matchAgentFilter" style="max-width:180px;"><option value="all">Все агенты</option></select>
-          <select class="settings-input" id="matchMapFilter" style="max-width:180px;"><option value="all">Все карты</option></select>
+          <div class="icon-select" id="matchAgentFilterWrap">
+            <button type="button" class="icon-select-btn" id="matchAgentFilterBtn">
+              <span class="icon-select-icon" id="matchAgentFilterIcon"></span>
+              <span id="matchAgentFilterLabel">Все агенты</span>
+              <svg class="icon-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="icon-select-menu" id="matchAgentFilterMenu"></div>
+            <select id="matchAgentFilter" style="display:none;"><option value="all">Все агенты</option></select>
+          </div>
+          <div class="icon-select" id="matchMapFilterWrap">
+            <button type="button" class="icon-select-btn" id="matchMapFilterBtn">
+              <span class="icon-select-icon" id="matchMapFilterIcon"></span>
+              <span id="matchMapFilterLabel">Все карты</span>
+              <svg class="icon-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="icon-select-menu" id="matchMapFilterMenu"></div>
+            <select id="matchMapFilter" style="display:none;"><option value="all">Все карты</option></select>
+          </div>
         </div>
         <div id="matchesList"><div class="empty-state">нет данных — подключи аккаунт в Настройках</div></div>
       </div>
@@ -477,6 +564,7 @@
             <button class="file-btn" id="searchBtn">Найти</button>
           </div>
           <div class="settings-row-desc" style="margin-top:10px;">использует твой ключ HenrikDev из Настроек — можно искать любого игрока, не только себя</div>
+          <div class="filter-row" id="searchHistoryRow" style="margin-top:14px;"></div>
         </div>
         <div id="searchResults"></div>
       </div>
@@ -548,6 +636,10 @@
     </section>
 
   </main>
+</div>
+
+<div class="modal-overlay" id="matchModal">
+  <div class="modal-box" id="matchModalBox"></div>
 </div>
 
 <script>
@@ -640,6 +732,27 @@ function playerStats(p){
   };
 }
 
+function getTeamsInfo(match){
+  const teams = match.teams;
+  const out = [];
+  if(Array.isArray(teams)){
+    teams.forEach(t=> out.push({
+      id: t.team_id || t.team,
+      won: !!t.won,
+      roundsWon: t.rounds_won ?? t.rounds?.won ?? null,
+      roundsLost: t.rounds_lost ?? t.rounds?.lost ?? null,
+    }));
+  } else if(teams && typeof teams === 'object'){
+    Object.entries(teams).forEach(([key, t])=> out.push({
+      id: key,
+      won: !!(t.has_won ?? t.won),
+      roundsWon: t.rounds_won ?? null,
+      roundsLost: t.rounds_lost ?? null,
+    }));
+  }
+  return out;
+}
+
 /* ---------- aggregation: per-map & per-agent personal stats ---------- */
 function aggregate(matches, puuid){
   const maps = {}, agents = {};
@@ -726,8 +839,9 @@ function renderOverview(state){
   document.getElementById('pfTag').textContent = account.tag ? '#'+account.tag : '';
   document.getElementById('pfLevel').textContent = account.account_level ? `Уровень ${account.account_level}` : '';
   const avatarEl = document.getElementById('pfAvatar');
-  const cardArt = account.card && (account.card.small || account.card.large);
+  const cardArt = accountCardUrl(account);
   if(cardArt){ avatarEl.style.backgroundImage = `url(${cardArt})`; avatarEl.style.backgroundSize='cover'; avatarEl.textContent=''; }
+  else { avatarEl.style.backgroundImage=''; avatarEl.textContent='🎯'; }
 
   const cur = mmr?.current || mmr?.current_data || {};
   const peak = mmr?.peak || mmr?.highest_rank || {};
@@ -783,22 +897,62 @@ function renderMiniTable(containerId, dict, total, kind){
   });
 }
 
+const SORT_STATE = {
+  maps: { field:'games', dir:'desc' },
+  agents: { field:'games', dir:'desc' },
+};
+function sortValue(o, total, field){
+  switch(field){
+    case 'games': return o.games;
+    case 'pickrate': return o.games/(total||1);
+    case 'kda': return kdRatio(o);
+    case 'adr': return o.adr/o.games;
+    case 'acs': return o.acs/o.games;
+    case 'hs': return o.hs/o.games;
+    case 'wr': return o.wins/o.games;
+    default: return o.games;
+  }
+}
+function sortRows(rows, total, sortState){
+  const { field, dir } = sortState;
+  const mult = dir==='asc' ? 1 : -1;
+  return rows.slice().sort((a,b)=> mult*(sortValue(a[1],total,field)-sortValue(b[1],total,field)));
+}
+function headCell(label, field, sortState){
+  const active = sortState.field===field;
+  const arrow = active ? (sortState.dir==='asc' ? ' ▲' : ' ▼') : '';
+  return `<span class="sortable-col ${active?'active':''}" data-field="${field}" style="cursor:pointer;user-select:none;">${label}${arrow}</span>`;
+}
+function wireHeadSort(headEl, sortState, onSort){
+  headEl.querySelectorAll('.sortable-col').forEach(span=>{
+    span.addEventListener('click', ()=>{
+      const field = span.dataset.field;
+      if(sortState.field===field){ sortState.dir = sortState.dir==='asc' ? 'desc' : 'asc'; }
+      else { sortState.field = field; sortState.dir = 'desc'; }
+      onSort();
+    });
+  });
+}
+
 function renderMapsTable(agg){
   const container = document.getElementById('mapsTable');
-  const rows = Object.entries(agg.maps).sort((a,b)=>b[1].games-a[1].games);
-  if(!rows.length){ container.innerHTML = '<div class="empty-state">нет данных — подключи аккаунт в Настройках</div>'; return; }
+  const allRows = Object.entries(agg.maps);
+  if(!allRows.length){ container.innerHTML = '<div class="empty-state">нет данных — подключи аккаунт в Настройках</div>'; return; }
+  const rows = sortRows(allRows, agg.totalGames, SORT_STATE.maps);
   container.innerHTML = '';
-  container.appendChild(el(`
+  const head = el(`
     <div class="meta-head-row">
       <div style="flex:2;">Карта</div>
-      <div class="meta-col" style="flex:1;">Матчи</div>
-      <div class="meta-col" style="flex:1;">Пикрейт</div>
-      <div class="meta-col" style="flex:1;">K/D/A</div>
-      <div class="meta-col" style="flex:1;">ADR</div>
-      <div class="meta-col" style="flex:1;">ACS</div>
-      <div class="meta-col wr" style="flex:1;">Винрейт</div>
+      <div class="meta-col" style="flex:1;">${headCell('Матчи','games',SORT_STATE.maps)}</div>
+      <div class="meta-col" style="flex:1;">${headCell('Пикрейт','pickrate',SORT_STATE.maps)}</div>
+      <div class="meta-col" style="flex:1;">${headCell('K/D/A','kda',SORT_STATE.maps)}</div>
+      <div class="meta-col" style="flex:1;">${headCell('ADR','adr',SORT_STATE.maps)}</div>
+      <div class="meta-col" style="flex:1;">${headCell('ACS','acs',SORT_STATE.maps)}</div>
+      <div class="meta-col wr" style="flex:1;">${headCell('Винрейт','wr',SORT_STATE.maps)}</div>
     </div>
-  `));
+  `);
+  wireHeadSort(head, SORT_STATE.maps, ()=>renderMapsTable(agg));
+  container.appendChild(head);
   rows.forEach(([name,o])=>{
     const wr = (o.wins/o.games*100).toFixed(0);
     const pr = (o.games/agg.totalGames*100).toFixed(0);
@@ -820,21 +974,24 @@ function renderMapsTable(agg){
 
 function renderAgentsTable(agg){
   const container = document.getElementById('agentsTable');
-  const rows = Object.entries(agg.agents).sort((a,b)=>b[1].games-a[1].games);
-  if(!rows.length){ container.innerHTML = '<div class="empty-state">нет данных — подключи аккаунт в Настройках</div>'; return; }
+  const allRows = Object.entries(agg.agents);
+  if(!allRows.length){ container.innerHTML = '<div class="empty-state">нет данных — подключи аккаунт в Настройках</div>'; return; }
+  const rows = sortRows(allRows, agg.totalGames, SORT_STATE.agents);
   container.innerHTML = '';
-  container.appendChild(el(`
+  const head = el(`
     <div class="meta-head-row">
       <div style="flex:2;">Агент</div>
-      <div class="meta-col" style="flex:1;">Матчи</div>
-      <div class="meta-col" style="flex:1;">Пикрейт</div>
-      <div class="meta-col" style="flex:1;">K/D/A</div>
-      <div class="meta-col" style="flex:1;">ADR</div>
-      <div class="meta-col" style="flex:1;">HS%</div>
-      <div class="meta-col wr" style="flex:1;">Винрейт</div>
+      <div class="meta-col" style="flex:1;">${headCell('Матчи','games',SORT_STATE.agents)}</div>
+      <div class="meta-col" style="flex:1;">${headCell('Пикрейт','pickrate',SORT_STATE.agents)}</div>
+      <div class="meta-col" style="flex:1;">${headCell('K/D/A','kda',SORT_STATE.agents)}</div>
+      <div class="meta-col" style="flex:1;">${headCell('ADR','adr',SORT_STATE.agents)}</div>
+      <div class="meta-col" style="flex:1;">${headCell('HS%','hs',SORT_STATE.agents)}</div>
+      <div class="meta-col wr" style="flex:1;">${headCell('Винрейт','wr',SORT_STATE.agents)}</div>
       <div class="meta-col small">Лучшая карта</div>
     </div>
-  `));
+  `);
+  wireHeadSort(head, SORT_STATE.agents, ()=>renderAgentsTable(agg));
+  container.appendChild(head);
   rows.forEach(([name,o])=>{
     const wr = (o.wins/o.games*100).toFixed(0);
     const pr = (o.games/agg.totalGames*100).toFixed(0);
@@ -872,7 +1029,58 @@ function populateMatchFilters(allMatches, puuid){
   mapSel.innerHTML = '<option value="all">Все карты</option>' + [...mapsSeen].sort().map(m=>`<option value="${m}">${m}</option>`).join('');
   if([...agentsSeen].includes(prevAgent)) agentSel.value = prevAgent;
   if([...mapsSeen].includes(prevMap)) mapSel.value = prevMap;
+
+  buildIconSelectMenu('matchAgentFilter','matchAgentFilterMenu','matchAgentFilterBtn','matchAgentFilterIcon','matchAgentFilterLabel', v=> v==='all' ? null : AGENTS[v]?.icon);
+  buildIconSelectMenu('matchMapFilter','matchMapFilterMenu','matchMapFilterBtn','matchMapFilterIcon','matchMapFilterLabel', v=> v==='all' ? null : MAPS[v]?.icon);
 }
+
+/* ---------- icon dropdown widget (for agent/map filters) ---------- */
+function buildIconSelectMenu(selectId, menuId, btnId, iconId, labelId, iconLookup){
+  const select = document.getElementById(selectId);
+  const menu = document.getElementById(menuId);
+  menu.innerHTML = '';
+  Array.from(select.options).forEach(opt=>{
+    const img = iconLookup(opt.value);
+    const item = el(`
+      <div class="icon-select-item ${opt.value===select.value?'selected':''}" data-value="${opt.value}">
+        ${img?`<img src="${img}" alt="">`:'<span class="ph"></span>'}
+        <span>${opt.textContent}</span>
+      </div>`);
+    item.addEventListener('click', ()=>{
+      select.value = opt.value;
+      select.dispatchEvent(new Event('change'));
+      updateIconSelectBtn(selectId, btnId, iconId, labelId, iconLookup);
+      menu.querySelectorAll('.icon-select-item').forEach(i=>i.classList.toggle('selected', i.dataset.value===select.value));
+      closeIconSelects();
+    });
+    menu.appendChild(item);
+  });
+  updateIconSelectBtn(selectId, btnId, iconId, labelId, iconLookup);
+}
+function updateIconSelectBtn(selectId, btnId, iconId, labelId, iconLookup){
+  const select = document.getElementById(selectId);
+  const opt = select.options[select.selectedIndex];
+  document.getElementById(labelId).textContent = opt ? opt.textContent : '';
+  const img = iconLookup(select.value);
+  document.getElementById(iconId).innerHTML = img ? `<img src="${img}" alt="" style="width:100%;height:100%;object-fit:cover;">` : '';
+}
+function closeIconSelects(){
+  document.querySelectorAll('.icon-select.open').forEach(w=>{
+    w.classList.remove('open');
+    w.querySelector('.icon-select-menu')?.classList.remove('open');
+  });
+}
+document.addEventListener('click', (e)=>{
+  const wrap = e.target.closest('.icon-select');
+  document.querySelectorAll('.icon-select').forEach(w=>{
+    if(w === wrap){
+      const isOpen = w.classList.contains('open');
+      closeIconSelects();
+      if(!isOpen && e.target.closest('.icon-select-btn')){ w.classList.add('open'); w.querySelector('.icon-select-menu').classList.add('open'); }
+    }
+  });
+  if(!wrap) closeIconSelects();
+});
 
 function renderMatches(matches, puuid){
   const container = document.getElementById('matchesList');
@@ -903,8 +1111,8 @@ function renderMatches(matches, puuid){
     const roundsPlayed = match.metadata?.rounds_played || 1;
     const acs = (st.score/roundsPlayed).toFixed(0);
 
-    container.appendChild(el(`
-      <div class="match-row ${won===true?'win':won===false?'loss':''}">
+    const row = el(`
+      <div class="match-row clickable ${won===true?'win':won===false?'loss':''}">
         <div class="match-map" style="${mapImg?`background-image:url(${mapImg});`:''}"></div>
         <div class="match-mid">
           <div class="match-mode">${mode}</div>
@@ -920,9 +1128,82 @@ function renderMatches(matches, puuid){
           <div class="match-stat"><div class="match-stat-val">${acs}</div><div class="match-stat-lbl">ACS</div></div>
         </div>
       </div>
-    `));
+    `);
+    row.addEventListener('click', ()=> openMatchModal(match, puuid));
+    container.appendChild(row);
   });
 }
+
+/* ---------- match detail modal ---------- */
+function openMatchModal(match, puuid){
+  const box = document.getElementById('matchModalBox');
+  const overlay = document.getElementById('matchModal');
+  const players = matchPlayers(match);
+  const me = players.find(p=>p.puuid===puuid);
+  const myTeamId = me ? (me.team_id || me.team) : null;
+  const mapName = match.metadata?.map?.name || match.metadata?.map || 'Unknown';
+  const mode = matchModeStr(match);
+  const mapImg = MAPS[mapName]?.icon;
+  const teams = getTeamsInfo(match);
+  const myTeam = teams.find(t=> String(t.id).toLowerCase() === String(myTeamId).toLowerCase());
+  const won = myTeam ? myTeam.won : matchWonForTeam(match, myTeamId);
+  const roundsPlayed = match.metadata?.rounds_played || (Array.isArray(match.rounds) ? match.rounds.length : 0) || null;
+
+  // group players by team, sort each team by score desc
+  const byTeam = {};
+  players.forEach(p=>{
+    const tid = p.team_id || p.team || 'unknown';
+    if(!byTeam[tid]) byTeam[tid] = [];
+    byTeam[tid].push(p);
+  });
+  Object.values(byTeam).forEach(list=> list.sort((a,b)=> playerStats(b).score - playerStats(a).score));
+
+  const scoreStr = teams.length===2 && teams[0].roundsWon!=null
+    ? `${teams.find(t=>String(t.id).toLowerCase()===String(myTeamId).toLowerCase())?.roundsWon ?? '?'} : ${teams.find(t=>String(t.id).toLowerCase()!==String(myTeamId).toLowerCase())?.roundsWon ?? '?'}`
+    : '';
+
+  let teamsHtml = '';
+  Object.entries(byTeam).forEach(([tid, list])=>{
+    const isMine = String(tid).toLowerCase() === String(myTeamId).toLowerCase();
+    teamsHtml += `<div class="modal-team-label">Команда ${tid}${isMine?'<span class="side-tag mine">твоя</span>':''}</div>`;
+    list.forEach(p=>{
+      const st = playerStats(p);
+      const agentName = p.agent?.name || p.character?.name || p.character || 'Unknown';
+      const agentImg = AGENTS[agentName]?.icon;
+      const acs = roundsPlayed ? (st.score/roundsPlayed).toFixed(0) : st.score;
+      const adr = roundsPlayed ? (st.damage/roundsPlayed).toFixed(0) : st.damage;
+      const name = p.name ? `${p.name}${p.tag?'#'+p.tag:''}` : 'Игрок';
+      teamsHtml += `
+        <div class="mp-row ${p.puuid===puuid?'me':''}">
+          <div class="mp-avatar" style="${agentImg?`background-image:url(${agentImg});`:''}"></div>
+          <div class="mp-name">${name}</div>
+          <div class="mp-col hide-sm">${agentName}</div>
+          <div class="mp-col">${st.kills}/${st.deaths}/${st.assists}</div>
+          <div class="mp-col hide-sm">${acs} ACS</div>
+          <div class="mp-col hide-sm">${adr} ADR</div>
+        </div>`;
+    });
+  });
+
+  box.innerHTML = `
+    <div class="modal-head" style="${mapImg?`background-image:linear-gradient(120deg, rgba(var(--accent-rgb),0.55), rgba(11,7,9,0.85)), url(${mapImg}); background-size:cover; background-position:center;`:''}">
+      <button class="modal-close" id="matchModalClose">✕</button>
+      <div class="modal-sub">${mode}</div>
+      <div class="modal-title">${mapName}</div>
+      <div class="modal-score ${won===true?'win':won===false?'loss':''}">${won===true?'ПОБЕДА':won===false?'ПОРАЖЕНИЕ':'—'} ${scoreStr?('· '+scoreStr):''}</div>
+    </div>
+    <div class="modal-body">${teamsHtml || '<div class="empty-state">нет данных по игрокам</div>'}</div>
+  `;
+  overlay.classList.add('open');
+  document.getElementById('matchModalClose').addEventListener('click', closeMatchModal);
+}
+function closeMatchModal(){
+  document.getElementById('matchModal').classList.remove('open');
+}
+document.getElementById('matchModal').addEventListener('click', (e)=>{
+  if(e.target.id==='matchModal') closeMatchModal();
+});
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMatchModal(); });
 
 /* ============================================================
    MAIN FLOW
@@ -945,20 +1226,31 @@ function matchModeStr(m){
   if(raw && typeof raw === 'object') return raw.name || raw.id || raw.mode || '';
   return String(raw||'');
 }
+function matchSeasonId(m){
+  const s = m.metadata?.season_id ?? m.metadata?.season?.id ?? m.metadata?.season ?? null;
+  if(!s) return null;
+  return typeof s === 'string' ? s : (s.id || s.uuid || null);
+}
+function accountCardUrl(account){
+  const card = account?.card;
+  if(!card) return null;
+  if(typeof card === 'string') return `https://media.valorant-api.com/playercards/${card}/smallart.png`;
+  return card.small || card.large || card.wide || (card.id ? `https://media.valorant-api.com/playercards/${card.id}/smallart.png` : null);
+}
 
 function getFilteredMatches(){
   const matches = CURRENT_STATE.matches || [];
   return matches.filter(m=>{
     const mode = matchModeStr(m).toLowerCase().replace(/\s+/g,'');
     if(FILTERS.mode !== 'all' && !mode.includes(FILTERS.mode.replace(/\s+/g,''))) return false;
-    if(FILTERS.season !== 'all' && m.metadata?.season_id !== FILTERS.season) return false;
+    if(FILTERS.season !== 'all' && matchSeasonId(m) !== FILTERS.season) return false;
     return true;
   });
 }
 
 function populateActFilter(){
   const sel = document.getElementById('actFilter');
-  const ids = [...new Set((CURRENT_STATE.matches||[]).map(m=>m.metadata?.season_id).filter(Boolean))];
+  const ids = [...new Set((CURRENT_STATE.matches||[]).map(matchSeasonId).filter(Boolean))];
   const prev = sel.value;
   sel.innerHTML = '<option value="all">Все акты</option>' + ids.map(id=>`<option value="${id}">${SEASONS[id]||('акт '+id.slice(0,8))}</option>`).join('');
   sel.value = ids.includes(prev) ? prev : 'all';
@@ -1066,12 +1358,19 @@ function initSettingsForm(){
     saveCfg({riotId, region, apiKey, size});
     await refreshAll(true);
   });
-  document.getElementById('refreshBtn').addEventListener('click', ()=> refreshAll(true));
+  document.getElementById('refreshBtn').addEventListener('click', ()=>{
+    const riotId = document.getElementById('cfgRiotId').value.trim();
+    const region = document.getElementById('cfgRegion').value;
+    const apiKey = document.getElementById('cfgApiKey').value.trim();
+    const size = parseInt(document.getElementById('cfgSize').value, 10);
+    saveCfg({riotId, region, apiKey, size});
+    refreshAll(true);
+  });
 }
 
 /* ---------- player search (any Riot ID, uses saved API key) ---------- */
-async function fetchProfileBundle(riotId, region, apiKey){
-  const cfgLike = { riotId, region, apiKey, size: 20 };
+async function fetchProfileBundle(riotId, region, apiKey, size){
+  const cfgLike = { riotId, region, apiKey, size: size || 20 };
   const [account, mmr, matches] = await Promise.all([
     fetchAccount(cfgLike),
     fetchMMR(cfgLike).catch(()=>null),
@@ -1086,7 +1385,7 @@ function renderSearchResult(bundle){
   const { account, mmr, agg } = bundle;
   const cur = mmr?.current || mmr?.current_data || {};
   const peak = mmr?.peak || mmr?.highest_rank || {};
-  const cardArt = account.card && (account.card.small || account.card.large);
+  const cardArt = accountCardUrl(account);
   const rankImg = cur.images?.small || cur.images?.large;
   const wins = agg.form.filter(f=>f.win===true).length;
   const total = agg.totalGames || 1;
@@ -1157,8 +1456,8 @@ function renderSearchResult(bundle){
     const agentName = me.agent?.name || me.character?.name || me.character || 'Unknown';
     const mapImg = MAPS[mapName]?.icon;
     const agentImg = AGENTS[agentName]?.icon;
-    matchesWrap.appendChild(el(`
-      <div class="match-row ${won===true?'win':won===false?'loss':''}">
+    const row = el(`
+      <div class="match-row clickable ${won===true?'win':won===false?'loss':''}">
         <div class="match-map" style="${mapImg?`background-image:url(${mapImg});`:''}"></div>
         <div class="match-mid">
           <div class="match-mode">${matchModeStr(match)}</div>
@@ -1173,25 +1472,57 @@ function renderSearchResult(bundle){
           <div class="match-stat"><div class="match-stat-val">${st.kills}/${st.deaths}/${st.assists}</div><div class="match-stat-lbl">KDA</div></div>
         </div>
       </div>
-    `));
+    `);
+    row.addEventListener('click', ()=> openMatchModal(match, account.puuid));
+    matchesWrap.appendChild(row);
   });
 }
 
-document.getElementById('searchBtn').addEventListener('click', async ()=>{
-  const riotId = document.getElementById('searchRiotId').value.trim();
-  const region = document.getElementById('searchRegion').value;
+/* ---------- search history ---------- */
+const SEARCH_HISTORY_KEY = 'valostats:searchHistory';
+function loadSearchHistory(){ try{ return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY)||'[]'); }catch(e){ return []; } }
+function saveSearchHistory(list){ try{ localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(list.slice(0,10))); }catch(e){} }
+function pushSearchHistory(riotId, region){
+  let list = loadSearchHistory().filter(h=> !(h.riotId.toLowerCase()===riotId.toLowerCase() && h.region===region));
+  list.unshift({ riotId, region });
+  saveSearchHistory(list);
+  renderSearchHistory();
+}
+function renderSearchHistory(){
+  const row = document.getElementById('searchHistoryRow');
+  const list = loadSearchHistory();
+  if(!list.length){ row.innerHTML=''; return; }
+  row.innerHTML = '<span class="settings-row-desc" style="width:100%;margin-bottom:2px;">история поиска:</span>';
+  list.forEach(h=>{
+    const chip = el(`<span class="chip">${h.riotId} <span style="opacity:0.6;">· ${h.region.toUpperCase()}</span></span>`);
+    chip.addEventListener('click', ()=> runSearch(h.riotId, h.region));
+    row.appendChild(chip);
+  });
+}
+
+async function runSearch(riotId, region){
+  document.getElementById('searchRiotId').value = riotId;
+  document.getElementById('searchRegion').value = region;
   const cfg = loadCfg();
   const wrap = document.getElementById('searchResults');
   if(!riotId.includes('#')){ wrap.innerHTML = '<div class="empty-state">укажи Riot ID в формате Имя#Тег</div>'; return; }
   if(!cfg.apiKey){ wrap.innerHTML = '<div class="empty-state">сначала укажи API-ключ HenrikDev в Настройках</div>'; return; }
   wrap.innerHTML = '<div class="empty-state"><span class="spinner" style="margin:0 auto 10px;display:inline-block;"></span><br>ищу игрока...</div>';
   try{
-    const bundle = await fetchProfileBundle(riotId, region, cfg.apiKey);
+    const bundle = await fetchProfileBundle(riotId, region, cfg.apiKey, cfg.size);
     renderSearchResult(bundle);
+    pushSearchHistory(riotId, region);
   }catch(err){
     wrap.innerHTML = `<div class="empty-state">ошибка: ${err.message}</div>`;
   }
+}
+
+document.getElementById('searchBtn').addEventListener('click', ()=>{
+  const riotId = document.getElementById('searchRiotId').value.trim();
+  const region = document.getElementById('searchRegion').value;
+  runSearch(riotId, region);
 });
+renderSearchHistory();
 
 /* ---------- boot ---------- */
 (async function init(){
