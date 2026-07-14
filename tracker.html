@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ValoStats</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --accent:#ff4655;
+    --accent-rgb:255,70,85;
+    --panel-rgb:26,17,20;
+    --bg-base:#0b0709;
+    --border: rgba(255,70,85,0.18);
+    --text:#f2e9ea;
+    --text-dim:#a8969a;
+    --text-faint:#6e5c60;
+    --panel-alpha:0.6;
+    --win:#61c26e;
+    --loss:#e0616c;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    background:var(--bg-base);
+    overflow-x:hidden;
+    animation: bodyFadeIn .5s ease;
+  }
+  .body-bg{
+    position:fixed; inset:-40px; z-index:-1;
+    background-color:var(--bg-base);
+  }
+  .body-bg::after{
+    content:""; position:absolute; inset:0;
+    background:
+      radial-gradient(ellipse 1000px 600px at 20% 0%, rgba(var(--accent-rgb),0.16), transparent 60%),
+      radial-gradient(ellipse 800px 500px at 100% 100%, rgba(var(--accent-rgb),0.10), transparent 55%);
+  }
+  .body-bg::before{
+    content:""; position:absolute; inset:0; opacity:0.35;
+    background-image:
+      linear-gradient(rgba(var(--accent-rgb),0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(var(--accent-rgb),0.07) 1px, transparent 1px);
+    background-size:46px 46px;
+    animation: gridDrift 26s linear infinite;
+    mask-image: radial-gradient(ellipse 900px 700px at 30% 10%, black, transparent 70%);
+  }
+  @keyframes gridDrift{ from{ background-position:0 0, 0 0; } to{ background-position:120px 160px, 120px 160px; } }
+  @keyframes bodyFadeIn{ from{opacity:0;} to{opacity:1;} }
+  @keyframes softFadeIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+  @keyframes shimmerBar{ 0%{ background-position:-200% 0; } 100%{ background-position:200% 0; } }
+  @keyframes pulseGlow{ 0%,100%{ box-shadow:0 0 6px 1px rgba(var(--accent-rgb),0.7); } 50%{ box-shadow:0 0 14px 4px rgba(var(--accent-rgb),0.95); } }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .statusbar, .profile-card, .meta-table, .match-row{ transition:box-shadow .25s ease, transform .25s ease, border-color .25s ease; }
+  .statusbar:hover, .profile-card:hover{ border-color: rgba(var(--accent-rgb),0.4); }
+
+  .shell{ display:flex; min-height:100vh; }
+  .sidebar{
+    width:230px; flex-shrink:0; border-right:1px solid var(--border);
+    padding:22px 14px; display:flex; flex-direction:column; gap:4px;
+    position:sticky; top:0; height:100vh;
+    transition:width .22s ease, padding .22s ease;
+  }
+  .sidebar-toggle{
+    position:absolute; top:24px; right:-12px; width:24px; height:24px; border-radius:50%;
+    background:var(--bg-base); border:1px solid var(--border); color:var(--text-dim);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; z-index:5;
+    transition:border-color .2s ease, color .2s ease, box-shadow .2s ease;
+  }
+  .sidebar-toggle svg{ width:13px; height:13px; transition:transform .22s ease; }
+  .sidebar-toggle:hover{ border-color:var(--accent); color:var(--accent); box-shadow:0 0 10px rgba(var(--accent-rgb),0.25); }
+  .sidebar.collapsed .sidebar-toggle svg{ transform:rotate(180deg); }
+  @media (max-width:760px){ .sidebar-toggle{ display:none; } }
+  @media (min-width:761px){
+    .sidebar.collapsed{ width:72px; padding-left:10px; padding-right:10px; }
+    .sidebar.collapsed .brand-text, .sidebar.collapsed .side-item span, .sidebar.collapsed .sidebar-foot{ display:none; }
+    .sidebar.collapsed .sidebar-brand{ justify-content:center; padding-left:0; padding-right:0; }
+    .sidebar.collapsed .side-item{ justify-content:center; padding-left:0; padding-right:0; }
+  }
+  .sidebar-brand{
+    font-family:'Sora', sans-serif; font-weight:800; font-size:15px; letter-spacing:0.5px;
+    color:var(--text); padding:6px 10px 20px 10px; display:flex; align-items:center; gap:10px;
+  }
+  .sidebar-brand .dot{ width:9px; height:9px; border-radius:50%; background:var(--accent); animation:pulseGlow 2.2s ease-in-out infinite; flex-shrink:0; }
+  .side-item{
+    display:flex; align-items:center; gap:12px;
+    background:transparent; border:none; border-radius:12px;
+    color:var(--text-dim); font-family:'Inter', sans-serif; font-size:13.5px; font-weight:500;
+    padding:11px 12px; cursor:pointer; text-align:left; width:100%;
+    transition:background .2s ease, color .2s ease, transform .2s ease;
+  }
+  .side-item svg{ width:17px; height:17px; flex-shrink:0; opacity:0.85; }
+  .side-item:hover{ background:rgba(255,255,255,0.06); color:var(--text); transform:translateX(2px); }
+  .side-item.active{ background:rgba(var(--accent-rgb),0.16); color:var(--text); box-shadow:inset 2px 0 0 var(--accent), 0 0 16px rgba(var(--accent-rgb),0.18); }
+  .side-item.active svg{ opacity:1; color:var(--accent); }
+  .sidebar-spacer{ flex:1; }
+  .sidebar-foot{
+    font-family:'IBM Plex Mono', monospace; font-size:9.5px; color:var(--text-faint);
+    padding:10px 10px 0 10px; border-top:1px solid var(--border); margin-top:6px;
+  }
+  .sb-status{ display:flex; align-items:center; gap:6px; padding:4px 10px 12px; font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--text-faint); }
+  .sb-status .d{ width:7px; height:7px; border-radius:50%; background:var(--text-faint); flex-shrink:0; }
+  .sb-status.on .d{ background:var(--win); box-shadow:0 0 8px rgba(97,194,110,0.6); }
+  .sb-status.off .d{ background:var(--loss); }
+
+  @media (max-width:760px){
+    .shell{ flex-direction:column; }
+    .sidebar{
+      width:100%; height:auto; position:fixed; bottom:0; left:0; top:auto;
+      display:flex; flex-direction:row; align-items:stretch;
+      padding:8px 6px; border-right:none; border-top:1px solid var(--border);
+      z-index:50; gap:2px; background:rgba(var(--panel-rgb),0.92); backdrop-filter:blur(18px);
+    }
+    .sidebar-brand, .sidebar-foot, .sb-status{ display:none; }
+    .sidebar-spacer{ display:none; }
+    .side-item{ flex:1 1 0; flex-direction:column; gap:4px; font-size:9.5px; padding:8px 4px; border-radius:10px; min-width:0; }
+    .side-item span{ line-height:1.1; }
+    .side-item.active{ box-shadow:none; background:rgba(var(--accent-rgb),0.16); }
+    .content{ padding-bottom:82px !important; }
+  }
+
+  .content{ flex:1; min-width:0; padding:32px 30px 60px; }
+  @media (max-width:600px){
+    .content{ padding:18px 14px 24px; }
+    h1{ font-size:21px; margin-bottom:16px; }
+    .statusbar{ padding:18px 18px; }
+    .stats-row{ grid-template-columns:repeat(2, 1fr); row-gap:16px; }
+    .stat:nth-child(3){ border-left:none; padding-left:0; }
+  }
+
+  .view{ display:none; animation: softFadeIn .3s ease; }
+  .view.active{ display:block; }
+  .wrap{ max-width:980px; }
+
+  .statusbar{
+    border:1px solid var(--border); border-radius:18px;
+    background:rgba(var(--panel-rgb), var(--panel-alpha));
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    padding:22px 26px; position:relative; overflow:hidden;
+    box-shadow:0 8px 30px rgba(0,0,0,0.25); margin-bottom:8px;
+  }
+  .statusbar::before{
+    content:""; position:absolute; top:0; left:0; right:0; height:2px;
+    background:linear-gradient(90deg, transparent, var(--accent) 50%, transparent);
+    background-size:200% 100%; animation: shimmerBar 3.5s ease-in-out infinite;
+  }
+  .eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:3px; color:var(--accent); text-transform:uppercase; margin-bottom:8px; }
+  h1{ font-family:'Sora', sans-serif; font-weight:700; font-size:28px; letter-spacing:-0.5px; margin:0 0 22px 0; color:var(--text); line-height:1.25; }
+  .stats-row{ display:grid; grid-template-columns:repeat(4, 1fr); gap:0; border-top:1px solid var(--border); padding-top:18px; }
+  .stat{ min-width:0; padding:0 18px; border-left:1px solid var(--border); }
+  .stat:first-child{ border-left:none; padding-left:0; }
+  .stat-label{ font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:1.5px; color:var(--text-faint); text-transform:uppercase; margin-bottom:8px; }
+  .stat-value{ font-family:'Sora', sans-serif; font-size:20px; font-weight:600; color:var(--text); }
+  .stat-value.accent{ color:var(--accent); }
+  .stat-value.win{ color:var(--win); }
+  .stat-value.loss{ color:var(--loss); }
+
+  .section-label{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:2.5px;
+    text-transform:uppercase; color:var(--text-faint); margin:28px 0 12px 2px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .section-label::after{ content:""; flex:1; height:1px; background:var(--border); }
+
+  /* ---------- PROFILE / ACCOUNT ---------- */
+  .profile-banner{
+    position:relative; width:100%; height:130px; border-radius:18px 18px 0 0;
+    background:linear-gradient(120deg, rgba(var(--accent-rgb),0.35), rgba(var(--accent-rgb),0.05));
+    background-size:cover; background-position:center; overflow:hidden;
+  }
+  .profile-card{
+    border:1px solid var(--border); border-radius:18px; overflow:hidden;
+    background:rgba(var(--panel-rgb), var(--panel-alpha)); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 8px 30px rgba(0,0,0,0.25); margin-bottom:8px;
+  }
+  .profile-body{ padding:0 26px 24px; position:relative; }
+  .profile-avatar-wrap{ margin-top:-40px; display:flex; align-items:flex-end; gap:18px; flex-wrap:wrap; justify-content:space-between; }
+  .profile-id{ display:flex; align-items:flex-end; gap:16px; }
+  .profile-avatar{
+    width:84px; height:84px; border-radius:18px; border:3px solid var(--bg-base);
+    background:rgba(var(--panel-rgb),1) center/cover no-repeat; box-shadow:0 6px 18px rgba(0,0,0,0.4);
+    display:flex; align-items:center; justify-content:center; font-size:30px; color:var(--text-faint); flex-shrink:0;
+  }
+  .profile-name{ font-family:'Sora', sans-serif; font-weight:700; font-size:20px; padding-bottom:8px; }
+  .profile-tag{ color:var(--text-faint); font-weight:500; }
+  .profile-level{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--text-dim); margin-top:4px; }
+  .rank-block{ display:flex; align-items:center; gap:10px; padding-bottom:6px; }
+  .rank-icon{ width:44px; height:44px; flex-shrink:0; background:rgba(0,0,0,0.2) center/contain no-repeat; border-radius:8px; }
+  .rank-text{ text-align:right; }
+  .rank-name{ font-family:'Sora', sans-serif; font-weight:600; font-size:14px; }
+  .rank-rr{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--text-faint); }
+
+  /* ---------- TABLES (maps / agents / leaderboard-style) ---------- */
+  .meta-table{ background:rgba(var(--panel-rgb), var(--panel-alpha)); backdrop-filter:blur(14px); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+  .meta-head-row{ display:flex; align-items:center; gap:12px; padding:10px 18px; border-bottom:1px solid var(--border); font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--text-faint); }
+  .meta-row{ display:flex; align-items:center; gap:12px; padding:12px 18px; border-bottom:1px solid var(--border); transition:background .15s ease; }
+  .meta-row:last-child{ border-bottom:none; }
+  .meta-row:hover{ background:rgba(255,255,255,0.03); }
+  .meta-avatar{
+    width:38px; height:38px; border-radius:9px; flex-shrink:0; background:rgba(0,0,0,0.3) center/cover no-repeat;
+    display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--text-faint); overflow:hidden;
+    border:1px solid var(--border);
+  }
+  .meta-avatar.round{ border-radius:50%; }
+  .meta-avatar img{ width:100%; height:100%; object-fit:cover; }
+  .meta-name{ flex:2; min-width:0; font-size:13.5px; font-weight:600; }
+  .meta-sub{ font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--text-faint); margin-top:2px; }
+  .meta-col{ flex:1; text-align:right; font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--text-dim); flex-shrink:0; min-width:56px; }
+  .meta-col.wr{ color:var(--accent); font-weight:600; }
+  .meta-bar-wrap{ flex:2; min-width:70px; }
+  .meta-bar{ height:6px; border-radius:4px; background:rgba(255,255,255,0.07); overflow:hidden; }
+  .meta-bar-fill{ height:100%; background:linear-gradient(90deg, var(--accent), rgba(var(--accent-rgb),0.6)); border-radius:4px; }
+
+  .chip{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:0.5px; text-transform:uppercase;
+    background:rgba(var(--panel-rgb), var(--panel-alpha)); border:1px solid var(--border); border-radius:20px;
+    color:var(--text-dim); padding:7px 13px; cursor:pointer; transition:all .2s ease;
+  }
+  .chip:hover{ border-color:var(--accent); color:var(--accent); }
+  .chip.active{ background:var(--accent); border-color:var(--accent); color:#0b0709; font-weight:600; box-shadow:0 0 14px rgba(var(--accent-rgb),0.4); }
+  .filter-row{ display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 14px; }
+
+  /* ---------- MATCH HISTORY ---------- */
+  .match-row{
+    display:flex; align-items:center; gap:14px; padding:14px 18px;
+    background:rgba(var(--panel-rgb), var(--panel-alpha)); backdrop-filter:blur(14px);
+    border:1px solid var(--border); border-left:4px solid var(--text-faint); border-radius:12px; margin-bottom:8px;
+  }
+  .match-row.win{ border-left-color:var(--win); }
+  .match-row.loss{ border-left-color:var(--loss); }
+  .match-map{ width:52px; height:52px; border-radius:10px; background:rgba(0,0,0,0.3) center/cover no-repeat; flex-shrink:0; }
+  .match-mid{ flex:1; min-width:0; }
+  .match-mode{ font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--text-faint); }
+  .match-mapname{ font-family:'Sora', sans-serif; font-weight:600; font-size:14px; margin-top:2px; }
+  .match-agent{ display:flex; align-items:center; gap:8px; }
+  .match-result{ font-family:'Sora', sans-serif; font-weight:700; font-size:13px; width:60px; text-align:center; flex-shrink:0; }
+  .match-result.win{ color:var(--win); } .match-result.loss{ color:var(--loss); }
+  .match-score{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--text-faint); }
+  .match-stats{ display:flex; gap:18px; flex-shrink:0; }
+  .match-stat{ text-align:right; min-width:44px; }
+  .match-stat-val{ font-family:'Sora', sans-serif; font-weight:600; font-size:13px; }
+  .match-stat-lbl{ font-family:'IBM Plex Mono', monospace; font-size:9px; color:var(--text-faint); text-transform:uppercase; }
+  @media (max-width:700px){ .match-stats{ display:none; } }
+
+  .form-pip{ width:8px; height:8px; border-radius:50%; display:inline-block; }
+  .form-pip.win{ background:var(--win); } .form-pip.loss{ background:var(--loss); }
+
+  /* ---------- SETTINGS ---------- */
+  .settings-panel{
+    background:rgba(var(--panel-rgb), var(--panel-alpha)); backdrop-filter:blur(14px);
+    border:1px solid var(--border); border-radius:16px; padding:6px 20px;
+  }
+  .settings-row{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; flex-wrap:wrap; }
+  .settings-row-label{ font-size:13.5px; font-weight:500; }
+  .settings-row-desc{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--text-faint); margin-top:3px; }
+  .settings-divider{ height:1px; background:var(--border); }
+  .settings-control{ flex-shrink:0; min-width:200px; }
+  .settings-input{
+    width:100%; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:9px; color:var(--text);
+    font-family:'Inter', sans-serif; font-size:13px; padding:9px 12px;
+  }
+  .settings-input:focus{ outline:none; border-color:var(--accent); }
+  .file-btn{
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; letter-spacing:0.5px;
+    background:var(--accent); border:1px solid var(--accent); border-radius:9px; color:#11111b;
+    padding:9px 16px; cursor:pointer; font-weight:600; transition:all .2s ease;
+  }
+  .file-btn:hover{ filter:brightness(1.08); }
+  .file-btn:disabled{ opacity:0.5; cursor:default; }
+  .file-btn.ghost{ background:transparent; color:var(--text-dim); border-color:var(--border); }
+  .file-btn.ghost:hover{ border-color:var(--accent); color:var(--accent); }
+
+  .banner{
+    display:flex; align-items:center; gap:12px; padding:14px 18px; border-radius:14px;
+    border:1px solid var(--border); background:rgba(var(--panel-rgb), var(--panel-alpha)); margin-bottom:16px;
+    font-size:13px; color:var(--text-dim);
+  }
+  .banner.warn{ border-color:rgba(var(--accent-rgb),0.4); }
+  .banner a{ color:var(--accent); }
+  .spinner{ width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
+  .empty-state{ text-align:center; padding:40px 20px; color:var(--text-faint); font-family:'IBM Plex Mono', monospace; font-size:12px; }
+
+  /* ---------- GLOBAL FILTER BAR ---------- */
+  .filter-bar{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:18px;
+    padding:10px 14px; border-radius:14px; border:1px solid var(--border);
+    background:rgba(var(--panel-rgb), var(--panel-alpha)); backdrop-filter:blur(14px);
+  }
+  .filter-bar .queue-chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .filter-bar-spacer{ flex:1; }
+  .best-map-badge{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--text-dim); display:flex; align-items:center; gap:6px; }
+  .best-map-badge img{ width:18px; height:18px; border-radius:4px; object-fit:cover; }
+  .best-map-badge .wr{ color:var(--accent); font-weight:600; }
+  .meta-col.small{ flex:0.7; min-width:70px; }
+
+  /* ---------- SEARCH ---------- */
+  .search-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .search-row .settings-input{ flex:1; min-width:180px; }
+  #searchResults .empty-state{ margin-top:14px; }
+</style>
+</head>
+<body>
+<div class="body-bg"></div>
+
+<div class="shell">
+  <nav class="sidebar" id="sidebar">
+    <button class="sidebar-toggle" id="sidebarToggle" type="button" title="Свернуть меню">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg>
+    </button>
+    <div class="sidebar-brand">
+      <svg class="dot" viewBox="0 0 24 24" style="display:none;"></svg>
+      <span class="dot"></span>
+      <span class="brand-text">ValoStats</span>
+    </div>
+
+    <button class="side-item active" data-view="overview">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span>Профиль</span>
+    </button>
+    <button class="side-item" data-view="maps">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3v18M15 3v18M3 8h18M3 16h18"/></svg>
+      <span>Карты</span>
+    </button>
+    <button class="side-item" data-view="agents">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+      <span>Агенты</span>
+    </button>
+    <button class="side-item" data-view="matches">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M11 20V4M18 20v-7"/></svg>
+      <span>Матчи</span>
+    </button>
+    <button class="side-item" data-view="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+      <span>Поиск</span>
+    </button>
+
+    <div class="sidebar-spacer"></div>
+    <div class="sb-status off" id="sbStatus"><span class="d"></span><span id="sbStatusText">не подключено</span></div>
+    <button class="side-item" data-view="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.56V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.55 1.7 1.7 0 00-1.87.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.7 1.7 0 004.6 15a1.7 1.7 0 00-1.56-1H3a2 2 0 110-4h.09A1.7 1.7 0 004.6 9a1.7 1.7 0 00-.33-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06A1.7 1.7 0 009 4.6a1.7 1.7 0 001-1.56V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.56 1.7 1.7 0 001.87-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.7 1.7 0 0019.4 9a1.7 1.7 0 001.56 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.51 1z"/></svg>
+      <span>Настройки</span>
+    </button>
+    <div class="sidebar-foot">ValoStats · статистика на HenrikDev API</div>
+  </nav>
+
+  <main class="content">
+
+    <div class="filter-bar" id="globalFilterBar" style="display:none;">
+      <div class="queue-chips" id="queueChips">
+        <span class="chip active" data-mode="all">Все режимы</span>
+        <span class="chip" data-mode="competitive">Competitive</span>
+        <span class="chip" data-mode="unrated">Unrated</span>
+        <span class="chip" data-mode="deathmatch">Deathmatch</span>
+        <span class="chip" data-mode="swiftplay">Swiftplay</span>
+        <span class="chip" data-mode="spikerush">Spike Rush</span>
+      </div>
+      <div class="filter-bar-spacer"></div>
+      <select class="settings-input" id="actFilter" style="max-width:200px;">
+        <option value="all">Все акты</option>
+      </select>
+    </div>
+
+    <!-- ================= OVERVIEW / PROFILE ================= -->
+    <section id="view-overview" class="view active">
+      <div class="wrap">
+        <div class="banner warn" id="notConnectedBanner" style="display:none;">
+          Аккаунт ещё не привязан. Перейди в <b style="margin:0 4px;color:var(--text);">Настройки</b> и укажи Riot ID + ключ HenrikDev.
+          <button class="file-btn" style="margin-left:auto;" onclick="switchView('settings')">Настроить</button>
+        </div>
+
+        <div class="profile-card" id="profileCard" style="display:none;">
+          <div class="profile-banner"></div>
+          <div class="profile-body">
+            <div class="profile-avatar-wrap">
+              <div class="profile-id">
+                <div class="profile-avatar" id="pfAvatar">🎯</div>
+                <div>
+                  <div class="profile-name"><span id="pfName">—</span><span class="profile-tag" id="pfTag"></span></div>
+                  <div class="profile-level" id="pfLevel"></div>
+                </div>
+              </div>
+              <div class="rank-block">
+                <div class="rank-text">
+                  <div class="rank-name" id="pfRankName">—</div>
+                  <div class="rank-rr" id="pfRankRR"></div>
+                </div>
+                <div class="rank-icon" id="pfRankIcon"></div>
+              </div>
+            </div>
+
+            <div class="stats-row" style="margin-top:22px;">
+              <div class="stat"><div class="stat-label">Пиковый ранг</div><div class="stat-value" id="pfPeak">—</div></div>
+              <div class="stat"><div class="stat-label">Винрейт (посл. матчи)</div><div class="stat-value accent" id="pfWR">—</div></div>
+              <div class="stat"><div class="stat-label">Средний KDA</div><div class="stat-value" id="pfKDA">—</div></div>
+              <div class="stat"><div class="stat-label">Хедшот %</div><div class="stat-value" id="pfHS">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-label">Последняя форма</div>
+        <div class="statusbar" id="formCard">
+          <div class="empty-state" id="formEmpty">нет данных — подключи аккаунт</div>
+          <div id="formPips" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+        </div>
+
+        <div class="section-label">Топ-3 карты</div>
+        <div class="meta-table" id="overviewMapsTable"><div class="empty-state">нет данных</div></div>
+
+        <div class="section-label">Топ-3 агента</div>
+        <div class="meta-table" id="overviewAgentsTable"><div class="empty-state">нет данных</div></div>
+      </div>
+    </section>
+
+    <!-- ================= MAPS ================= -->
+    <section id="view-maps" class="view">
+      <div class="wrap">
+        <div class="statusbar">
+          <div class="eyebrow">‖ личная статистика</div>
+          <h1>Статистика по картам</h1>
+          <div class="settings-row-desc" style="margin:-14px 0 0;">на основе последних загруженных матчей (см. Настройки → сколько матчей подгружать)</div>
+        </div>
+        <div class="section-label">Карты</div>
+        <div class="meta-table" id="mapsTable"><div class="empty-state">нет данных — подключи аккаунт в Настройках</div></div>
+      </div>
+    </section>
+
+    <!-- ================= AGENTS ================= -->
+    <section id="view-agents" class="view">
+      <div class="wrap">
+        <div class="statusbar">
+          <div class="eyebrow">‖ личная статистика</div>
+          <h1>Статистика по агентам</h1>
+          <div class="settings-row-desc" style="margin:-14px 0 0;">винрейт и пикрейт — сколько раз агент выбирался от общего числа матчей</div>
+        </div>
+        <div class="section-label">Агенты</div>
+        <div class="meta-table" id="agentsTable"><div class="empty-state">нет данных — подключи аккаунт в Настройках</div></div>
+      </div>
+    </section>
+
+    <!-- ================= MATCHES ================= -->
+    <section id="view-matches" class="view">
+      <div class="wrap">
+        <div class="statusbar">
+          <div class="eyebrow">‖ история</div>
+          <h1>Последние матчи</h1>
+        </div>
+        <div class="filter-row">
+          <select class="settings-input" id="matchAgentFilter" style="max-width:180px;"><option value="all">Все агенты</option></select>
+          <select class="settings-input" id="matchMapFilter" style="max-width:180px;"><option value="all">Все карты</option></select>
+        </div>
+        <div id="matchesList"><div class="empty-state">нет данных — подключи аккаунт в Настройках</div></div>
+      </div>
+    </section>
+
+    <!-- ================= SEARCH ================= -->
+    <section id="view-search" class="view">
+      <div class="wrap">
+        <div class="statusbar">
+          <div class="eyebrow">‖ поиск игрока</div>
+          <h1>Найти игрока</h1>
+          <div class="search-row">
+            <input type="text" class="settings-input" id="searchRiotId" placeholder="Имя#Тег">
+            <select class="settings-input" id="searchRegion" style="max-width:120px;">
+              <option value="eu">EU</option>
+              <option value="na">NA</option>
+              <option value="ap">AP</option>
+              <option value="kr">KR</option>
+              <option value="latam">LATAM</option>
+              <option value="br">BR</option>
+            </select>
+            <button class="file-btn" id="searchBtn">Найти</button>
+          </div>
+          <div class="settings-row-desc" style="margin-top:10px;">использует твой ключ HenrikDev из Настроек — можно искать любого игрока, не только себя</div>
+        </div>
+        <div id="searchResults"></div>
+      </div>
+    </section>
+
+    <!-- ================= SETTINGS ================= -->
+    <section id="view-settings" class="view">
+      <div class="wrap">
+        <div class="statusbar">
+          <div class="eyebrow">‖ настройки</div>
+          <h1>Привязка аккаунта</h1>
+        </div>
+
+        <div class="section-label">Valorant — HenrikDev API</div>
+        <div class="settings-panel">
+          <div class="settings-row-desc" style="margin:12px 0 10px;">
+            Данные берутся через сторонний сервис HenrikDev API (community-проект, не от Riot). Нужен бесплатный ключ:
+            зайди на <a href="https://api.henrikdev.xyz/dashboard/api-keys" target="_blank" rel="noopener" style="color:var(--accent);">страницу выдачи ключей HenrikDev</a>,
+            войди через Discord и создай ключ (Basic — бесплатно). Ключ хранится только в этом браузере (localStorage) и уходит только к HenrikDev API.
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Riot ID</div><div class="settings-row-desc">Имя#Тег, например Player#EUW1</div></div>
+            <div class="settings-control"><input type="text" class="settings-input" id="cfgRiotId" placeholder="Имя#Тег"></div>
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Регион</div></div>
+            <div class="settings-control">
+              <select class="settings-input" id="cfgRegion">
+                <option value="eu">EU</option>
+                <option value="na">NA</option>
+                <option value="ap">AP</option>
+                <option value="kr">KR</option>
+                <option value="latam">LATAM</option>
+                <option value="br">BR</option>
+              </select>
+            </div>
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">API-ключ HenrikDev</div></div>
+            <div class="settings-control"><input type="password" class="settings-input" id="cfgApiKey" placeholder="HDEV-..."></div>
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Сколько матчей подгружать</div><div class="settings-row-desc">больше матчей = точнее статистика по картам/агентам, но дольше грузится</div></div>
+            <div class="settings-control">
+              <select class="settings-input" id="cfgSize">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="30">30</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Сохранить и проверить</div>
+              <div class="settings-row-desc" id="cfgStatus">не подключено</div>
+            </div>
+            <div class="settings-control" style="display:flex; gap:8px;">
+              <button class="file-btn" id="connectBtn">Подключить</button>
+              <button class="file-btn ghost" id="refreshBtn" style="display:none;">Обновить</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   ValoStats — личный трекер статистики Valorant на HenrikDev API
+   ============================================================ */
+
+const CFG_KEY = 'valostats:config';
+const CACHE_KEY = 'valostats:cache';
+const API_BASE = 'https://api.henrikdev.xyz';
+
+function loadCfg(){
+  try{ return Object.assign({riotId:'', region:'eu', apiKey:'', size:20}, JSON.parse(localStorage.getItem(CFG_KEY)||'{}')); }
+  catch(e){ return {riotId:'', region:'eu', apiKey:'', size:20}; }
+}
+function saveCfg(cfg){ try{ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }catch(e){} }
+function loadCache(){ try{ return JSON.parse(localStorage.getItem(CACHE_KEY)||'null'); }catch(e){ return null; } }
+function saveCache(data){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify(data)); }catch(e){} }
+
+async function api(path, key){
+  const res = await fetch(API_BASE + path, { headers:{ 'Accept':'application/json', 'Authorization':key } });
+  const json = await res.json().catch(()=>null);
+  if(!res.ok || !json || (json.status && json.status >= 400)){
+    const msg = (json && (json.errors?.[0]?.message || json.message)) || `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+  return json;
+}
+
+/* ---------- game data (agent/map icons) from valorant-api.com (no key needed) ---------- */
+let AGENTS = {}, MAPS = {};
+async function loadGameData(){
+  try{
+    const [aRes, mRes] = await Promise.all([
+      fetch('https://valorant-api.com/v1/agents?isPlayableCharacter=true&language=ru-RU').then(r=>r.json()),
+      fetch('https://valorant-api.com/v1/maps?language=ru-RU').then(r=>r.json()),
+    ]);
+    (aRes.data||[]).forEach(a=>{ AGENTS[a.displayName] = { icon: a.displayIconSmall || a.displayIcon, role: a.role?.displayName || '' }; });
+    (mRes.data||[]).forEach(m=>{ MAPS[m.displayName] = { splash: m.splash, icon: m.listViewIcon || m.splash }; });
+  }catch(e){ console.warn('game data load failed', e); }
+}
+
+/* ---------- fetching ---------- */
+async function fetchAccount(cfg){
+  const [name, tag] = cfg.riotId.split('#');
+  const json = await api(`/valorant/v2/account/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`, cfg.apiKey);
+  return json.data;
+}
+async function fetchMMR(cfg){
+  const [name, tag] = cfg.riotId.split('#');
+  const json = await api(`/valorant/v3/mmr/${cfg.region}/pc/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`, cfg.apiKey);
+  return json.data;
+}
+async function fetchMatches(cfg){
+  const [name, tag] = cfg.riotId.split('#');
+  const json = await api(`/valorant/v4/matches/${cfg.region}/pc/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?size=${cfg.size||20}`, cfg.apiKey);
+  return json.data || [];
+}
+
+/* ---------- helpers to read match JSON defensively (HenrikDev v4 shape, with v3-ish fallbacks) ---------- */
+function matchPlayers(match){
+  const p = match.players;
+  if(Array.isArray(p)) return p;
+  if(p && Array.isArray(p.all_players)) return p.all_players;
+  return [];
+}
+function matchWonForTeam(match, teamId){
+  const teams = match.teams;
+  if(Array.isArray(teams)){
+    const t = teams.find(t => t.team_id === teamId || t.team === teamId);
+    return t ? !!t.won : null;
+  }
+  if(teams && typeof teams === 'object'){
+    const key = String(teamId||'').toLowerCase();
+    if(teams[key]) return !!(teams[key].has_won ?? teams[key].won);
+  }
+  return null;
+}
+function playerStats(p){
+  const s = p.stats || {};
+  return {
+    kills: s.kills ?? p.kills ?? 0,
+    deaths: s.deaths ?? p.deaths ?? 0,
+    assists: s.assists ?? p.assists ?? 0,
+    score: s.score ?? p.score ?? 0,
+    headshots: s.headshots ?? 0,
+    bodyshots: s.bodyshots ?? 0,
+    legshots: s.legshots ?? 0,
+    damage: s.damage?.dealt ?? s.damage_made ?? p.damage_made ?? 0,
+  };
+}
+
+/* ---------- aggregation: per-map & per-agent personal stats ---------- */
+function aggregate(matches, puuid){
+  const maps = {}, agents = {};
+  let totalGames = 0;
+  const form = []; // most recent first: {win, map, agent}
+
+  matches.forEach(match=>{
+    const players = matchPlayers(match);
+    const me = players.find(p => p.puuid === puuid);
+    if(!me) return;
+
+    const mapName = match.metadata?.map?.name || match.metadata?.map || 'Unknown';
+    const teamId = me.team_id || me.team;
+    const won = matchWonForTeam(match, teamId);
+    const st = playerStats(me);
+    const roundsPlayed = match.metadata?.rounds_played || (Array.isArray(match.rounds) ? match.rounds.length : 0) || 1;
+    const acs = roundsPlayed ? st.score / roundsPlayed : 0;
+    const totalShots = st.headshots + st.bodyshots + st.legshots;
+    const hsPct = totalShots ? (st.headshots / totalShots * 100) : 0;
+    const agentName = me.agent?.name || me.character?.name || me.character || 'Unknown';
+    const mode = match.metadata?.mode || match.metadata?.queue || '';
+
+    totalGames++;
+    form.push({ win: won, map: mapName, agent: agentName, mode });
+
+    const adr = roundsPlayed ? st.damage / roundsPlayed : 0;
+
+    if(!maps[mapName]) maps[mapName] = { games:0, wins:0, kills:0, deaths:0, assists:0, acs:0, hs:0, adr:0 };
+    Object.assign(maps[mapName], {
+      games: maps[mapName].games+1,
+      wins: maps[mapName].wins + (won?1:0),
+      kills: maps[mapName].kills + st.kills,
+      deaths: maps[mapName].deaths + st.deaths,
+      assists: maps[mapName].assists + st.assists,
+      acs: maps[mapName].acs + acs,
+      hs: maps[mapName].hs + hsPct,
+      adr: maps[mapName].adr + adr,
+    });
+
+    if(!agents[agentName]) agents[agentName] = { games:0, wins:0, kills:0, deaths:0, assists:0, acs:0, hs:0, adr:0, byMap:{} };
+    Object.assign(agents[agentName], {
+      games: agents[agentName].games+1,
+      wins: agents[agentName].wins + (won?1:0),
+      kills: agents[agentName].kills + st.kills,
+      deaths: agents[agentName].deaths + st.deaths,
+      assists: agents[agentName].assists + st.assists,
+      acs: agents[agentName].acs + acs,
+      hs: agents[agentName].hs + hsPct,
+      adr: agents[agentName].adr + adr,
+    });
+    const bm = agents[agentName].byMap;
+    if(!bm[mapName]) bm[mapName] = { games:0, wins:0 };
+    bm[mapName].games++; if(won) bm[mapName].wins++;
+  });
+
+  return { maps, agents, totalGames, form };
+}
+
+function kda(o){ return `${(o.kills/o.games).toFixed(1)}/${(o.deaths/o.games).toFixed(1)}/${(o.assists/o.games).toFixed(1)}`; }
+function kdRatio(o){ return o.deaths ? (o.kills/o.deaths) : o.kills; }
+function bestMap(agentObj){
+  const entries = Object.entries(agentObj.byMap || {});
+  if(!entries.length) return null;
+  entries.sort((a,b)=> (b[1].wins/b[1].games) - (a[1].wins/a[1].games) || b[1].games-a[1].games);
+  const [name, o] = entries[0];
+  return { name, wr: Math.round(o.wins/o.games*100) };
+}
+
+/* ============================================================
+   RENDERING
+   ============================================================ */
+
+function el(html){ const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; }
+
+function renderOverview(state){
+  const { account, mmr, agg } = state;
+  const card = document.getElementById('profileCard');
+  const notConnected = document.getElementById('notConnectedBanner');
+  if(!account){ card.style.display='none'; notConnected.style.display='flex'; return; }
+  notConnected.style.display='none';
+  card.style.display='';
+
+  document.getElementById('pfName').textContent = account.name || '—';
+  document.getElementById('pfTag').textContent = account.tag ? '#'+account.tag : '';
+  document.getElementById('pfLevel').textContent = account.account_level ? `Уровень ${account.account_level}` : '';
+  const avatarEl = document.getElementById('pfAvatar');
+  const cardArt = account.card && (account.card.small || account.card.large);
+  if(cardArt){ avatarEl.style.backgroundImage = `url(${cardArt})`; avatarEl.style.backgroundSize='cover'; avatarEl.textContent=''; }
+
+  const cur = mmr?.current || mmr?.current_data || {};
+  const peak = mmr?.peak || mmr?.highest_rank || {};
+  document.getElementById('pfRankName').textContent = cur.tier?.name || cur.currenttierpatched || 'Без ранга';
+  const rr = cur.rr ?? cur.ranking_in_tier;
+  document.getElementById('pfRankRR').textContent = (rr!=null) ? `${rr} RR` : '';
+  const rankIcon = document.getElementById('pfRankIcon');
+  const rankImg = cur.images?.small || cur.images?.large;
+  if(rankImg) rankIcon.style.backgroundImage = `url(${rankImg})`;
+  document.getElementById('pfPeak').textContent = peak.tier?.name || peak.patched_tier || '—';
+
+  const wins = agg.form.filter(f=>f.win===true).length;
+  const total = agg.totalGames || 1;
+  document.getElementById('pfWR').textContent = agg.totalGames ? `${(wins/total*100).toFixed(0)}%` : '—';
+
+  let sumK=0,sumD=0,sumA=0,sumHS=0;
+  Object.values(agg.maps).forEach(m=>{ sumK+=m.kills; sumD+=m.deaths; sumA+=m.assists; sumHS+=m.hs*m.games; });
+  document.getElementById('pfKDA').textContent = agg.totalGames ? `${(sumK/total).toFixed(1)}/${(sumD/total).toFixed(1)}/${(sumA/total).toFixed(1)}` : '—';
+  document.getElementById('pfHS').textContent = agg.totalGames ? `${(sumHS/total).toFixed(0)}%` : '—';
+
+  // form pips
+  const pipsWrap = document.getElementById('formPips');
+  const formEmpty = document.getElementById('formEmpty');
+  pipsWrap.innerHTML = '';
+  if(agg.form.length){
+    formEmpty.style.display='none';
+    agg.form.slice(0,20).forEach(f=>{
+      pipsWrap.appendChild(el(`<span class="form-pip ${f.win?'win':'loss'}" title="${f.map} — ${f.win?'победа':'поражение'}"></span>`));
+    });
+  } else { formEmpty.style.display=''; }
+
+  // top 3 maps / agents mini tables
+  renderMiniTable('overviewMapsTable', agg.maps, agg.totalGames, 'map');
+  renderMiniTable('overviewAgentsTable', agg.agents, agg.totalGames, 'agent');
+}
+
+function renderMiniTable(containerId, dict, total, kind){
+  const rows = Object.entries(dict).sort((a,b)=>b[1].games-a[1].games).slice(0,3);
+  const container = document.getElementById(containerId);
+  if(!rows.length){ container.innerHTML = '<div class="empty-state">нет данных</div>'; return; }
+  container.innerHTML = '';
+  rows.forEach(([name, o])=>{
+    const wr = (o.wins/o.games*100).toFixed(0);
+    const img = kind==='map' ? MAPS[name]?.icon : AGENTS[name]?.icon;
+    container.appendChild(el(`
+      <div class="meta-row">
+        <div class="meta-avatar ${kind==='agent'?'round':''}">${img?`<img src="${img}" alt="${name}">`:''}</div>
+        <div class="meta-name">${name}<div class="meta-sub">${o.games} матчей</div></div>
+        <div class="meta-bar-wrap"><div class="meta-bar"><div class="meta-bar-fill" style="width:${wr}%;"></div></div></div>
+        <div class="meta-col wr">${wr}%</div>
+      </div>
+    `));
+  });
+}
+
+function renderMapsTable(agg){
+  const container = document.getElementById('mapsTable');
+  const rows = Object.entries(agg.maps).sort((a,b)=>b[1].games-a[1].games);
+  if(!rows.length){ container.innerHTML = '<div class="empty-state">нет данных — подключи аккаунт в Настройках</div>'; return; }
+  container.innerHTML = '';
+  container.appendChild(el(`
+    <div class="meta-head-row">
+      <div style="flex:2;">Карта</div>
+      <div class="meta-col" style="flex:1;">Матчи</div>
+      <div class="meta-col" style="flex:1;">Пикрейт</div>
+      <div class="meta-col" style="flex:1;">K/D/A</div>
+      <div class="meta-col" style="flex:1;">ADR</div>
+      <div class="meta-col" style="flex:1;">ACS</div>
+      <div class="meta-col wr" style="flex:1;">Винрейт</div>
+    </div>
+  `));
+  rows.forEach(([name,o])=>{
+    const wr = (o.wins/o.games*100).toFixed(0);
+    const pr = (o.games/agg.totalGames*100).toFixed(0);
+    const img = MAPS[name]?.icon;
+    container.appendChild(el(`
+      <div class="meta-row">
+        <div class="meta-avatar">${img?`<img src="${img}" alt="${name}">`:''}</div>
+        <div class="meta-name">${name}</div>
+        <div class="meta-col" style="flex:1;">${o.games}</div>
+        <div class="meta-col" style="flex:1;">${pr}%</div>
+        <div class="meta-col" style="flex:1;">${kda(o)}</div>
+        <div class="meta-col" style="flex:1;">${(o.adr/o.games).toFixed(0)}</div>
+        <div class="meta-col" style="flex:1;">${(o.acs/o.games).toFixed(0)}</div>
+        <div class="meta-col wr" style="flex:1;">${wr}%</div>
+      </div>
+    `));
+  });
+}
+
+function renderAgentsTable(agg){
+  const container = document.getElementById('agentsTable');
+  const rows = Object.entries(agg.agents).sort((a,b)=>b[1].games-a[1].games);
+  if(!rows.length){ container.innerHTML = '<div class="empty-state">нет данных — подключи аккаунт в Настройках</div>'; return; }
+  container.innerHTML = '';
+  container.appendChild(el(`
+    <div class="meta-head-row">
+      <div style="flex:2;">Агент</div>
+      <div class="meta-col" style="flex:1;">Матчи</div>
+      <div class="meta-col" style="flex:1;">Пикрейт</div>
+      <div class="meta-col" style="flex:1;">K/D/A</div>
+      <div class="meta-col" style="flex:1;">ADR</div>
+      <div class="meta-col" style="flex:1;">HS%</div>
+      <div class="meta-col wr" style="flex:1;">Винрейт</div>
+      <div class="meta-col small">Лучшая карта</div>
+    </div>
+  `));
+  rows.forEach(([name,o])=>{
+    const wr = (o.wins/o.games*100).toFixed(0);
+    const pr = (o.games/agg.totalGames*100).toFixed(0);
+    const img = AGENTS[name]?.icon;
+    const bm = bestMap(o);
+    const bmImg = bm ? MAPS[bm.name]?.icon : null;
+    container.appendChild(el(`
+      <div class="meta-row">
+        <div class="meta-avatar round">${img?`<img src="${img}" alt="${name}">`:''}</div>
+        <div class="meta-name">${name}<div class="meta-sub">${AGENTS[name]?.role||''}</div></div>
+        <div class="meta-col" style="flex:1;">${o.games}</div>
+        <div class="meta-col" style="flex:1;">${pr}%</div>
+        <div class="meta-col" style="flex:1;">${kda(o)}</div>
+        <div class="meta-col" style="flex:1;">${(o.adr/o.games).toFixed(0)}</div>
+        <div class="meta-col" style="flex:1;">${(o.hs/o.games).toFixed(0)}%</div>
+        <div class="meta-col wr" style="flex:1;">${wr}%</div>
+        <div class="best-map-badge small">${bm?`${bmImg?`<img src="${bmImg}" alt="${bm.name}">`:''}${bm.name}<span class="wr">${bm.wr}%</span>`:'—'}</div>
+      </div>
+    `));
+  });
+}
+
+function populateMatchFilters(allMatches, puuid){
+  const agentSel = document.getElementById('matchAgentFilter');
+  const mapSel = document.getElementById('matchMapFilter');
+  const agentsSeen = new Set(), mapsSeen = new Set();
+  allMatches.forEach(match=>{
+    const me = matchPlayers(match).find(p=>p.puuid===puuid);
+    if(!me) return;
+    agentsSeen.add(me.agent?.name || me.character?.name || me.character || 'Unknown');
+    mapsSeen.add(match.metadata?.map?.name || match.metadata?.map || 'Unknown');
+  });
+  const prevAgent = agentSel.value, prevMap = mapSel.value;
+  agentSel.innerHTML = '<option value="all">Все агенты</option>' + [...agentsSeen].sort().map(a=>`<option value="${a}">${a}</option>`).join('');
+  mapSel.innerHTML = '<option value="all">Все карты</option>' + [...mapsSeen].sort().map(m=>`<option value="${m}">${m}</option>`).join('');
+  if([...agentsSeen].includes(prevAgent)) agentSel.value = prevAgent;
+  if([...mapsSeen].includes(prevMap)) mapSel.value = prevMap;
+}
+
+function renderMatches(matches, puuid){
+  const container = document.getElementById('matchesList');
+  const agentFilter = document.getElementById('matchAgentFilter')?.value || 'all';
+  const mapFilter = document.getElementById('matchMapFilter')?.value || 'all';
+  const filtered = matches.filter(match=>{
+    const me = matchPlayers(match).find(p=>p.puuid===puuid);
+    if(!me) return false;
+    const agentName = me.agent?.name || me.character?.name || me.character || 'Unknown';
+    const mapName = match.metadata?.map?.name || match.metadata?.map || 'Unknown';
+    if(agentFilter !== 'all' && agentName !== agentFilter) return false;
+    if(mapFilter !== 'all' && mapName !== mapFilter) return false;
+    return true;
+  });
+  if(!filtered.length){ container.innerHTML = '<div class="empty-state">нет матчей по этим фильтрам</div>'; return; }
+  container.innerHTML = '';
+  filtered.forEach(match=>{
+    const players = matchPlayers(match);
+    const me = players.find(p=>p.puuid===puuid);
+    if(!me) return;
+    const mapName = match.metadata?.map?.name || match.metadata?.map || 'Unknown';
+    const won = matchWonForTeam(match, me.team_id || me.team);
+    const st = playerStats(me);
+    const agentName = me.agent?.name || me.character?.name || me.character || 'Unknown';
+    const mapImg = MAPS[mapName]?.icon;
+    const agentImg = AGENTS[agentName]?.icon;
+    const mode = match.metadata?.mode || match.metadata?.queue || '';
+    const roundsPlayed = match.metadata?.rounds_played || 1;
+    const acs = (st.score/roundsPlayed).toFixed(0);
+
+    container.appendChild(el(`
+      <div class="match-row ${won===true?'win':won===false?'loss':''}">
+        <div class="match-map" style="${mapImg?`background-image:url(${mapImg});`:''}"></div>
+        <div class="match-mid">
+          <div class="match-mode">${mode}</div>
+          <div class="match-mapname">${mapName}</div>
+          <div class="match-agent" style="margin-top:6px;">
+            <div class="meta-avatar round" style="width:22px;height:22px;">${agentImg?`<img src="${agentImg}" alt="${agentName}">`:''}</div>
+            <span class="meta-sub" style="font-size:11px;">${agentName}</span>
+          </div>
+        </div>
+        <div class="match-result ${won===true?'win':won===false?'loss':''}">${won===true?'ПОБЕДА':won===false?'ПОРАЖЕНИЕ':'—'}</div>
+        <div class="match-stats">
+          <div class="match-stat"><div class="match-stat-val">${st.kills}/${st.deaths}/${st.assists}</div><div class="match-stat-lbl">KDA</div></div>
+          <div class="match-stat"><div class="match-stat-val">${acs}</div><div class="match-stat-lbl">ACS</div></div>
+        </div>
+      </div>
+    `));
+  });
+}
+
+/* ============================================================
+   MAIN FLOW
+   ============================================================ */
+
+let CURRENT_STATE = { account:null, mmr:null, agg:{maps:{},agents:{},totalGames:0,form:[]}, matches:[] };
+let FILTERS = { mode:'all', season:'all' };
+let SEASONS = {};
+
+async function loadSeasons(){
+  try{
+    const res = await fetch('https://valorant-api.com/v1/seasons?language=ru-RU').then(r=>r.json());
+    (res.data||[]).forEach(s=>{ SEASONS[s.uuid] = s.displayName; });
+  }catch(e){ console.warn('seasons load failed', e); }
+}
+
+function getFilteredMatches(){
+  const matches = CURRENT_STATE.matches || [];
+  return matches.filter(m=>{
+    const mode = (m.metadata?.mode || m.metadata?.queue || '').toLowerCase().replace(/\s+/g,'');
+    if(FILTERS.mode !== 'all' && !mode.includes(FILTERS.mode.replace(/\s+/g,''))) return false;
+    if(FILTERS.season !== 'all' && m.metadata?.season_id !== FILTERS.season) return false;
+    return true;
+  });
+}
+
+function populateActFilter(){
+  const sel = document.getElementById('actFilter');
+  const ids = [...new Set((CURRENT_STATE.matches||[]).map(m=>m.metadata?.season_id).filter(Boolean))];
+  const prev = sel.value;
+  sel.innerHTML = '<option value="all">Все акты</option>' + ids.map(id=>`<option value="${id}">${SEASONS[id]||('акт '+id.slice(0,8))}</option>`).join('');
+  sel.value = ids.includes(prev) ? prev : 'all';
+}
+
+function setSidebarStatus(connected, text){
+  const sb = document.getElementById('sbStatus');
+  sb.classList.toggle('on', connected);
+  sb.classList.toggle('off', !connected);
+  document.getElementById('sbStatusText').textContent = text;
+}
+
+async function refreshAll(userInitiated){
+  const cfg = loadCfg();
+  if(!cfg.riotId || !cfg.apiKey) return;
+  const statusEl = document.getElementById('cfgStatus');
+  const connectBtn = document.getElementById('connectBtn');
+  const refreshBtn = document.getElementById('refreshBtn');
+  if(userInitiated){ statusEl.textContent = 'загружаю...'; connectBtn.disabled = true; if(refreshBtn) refreshBtn.disabled = true; }
+  try{
+    const [account, mmr, matches] = await Promise.all([
+      fetchAccount(cfg),
+      fetchMMR(cfg).catch(()=>null),
+      fetchMatches(cfg).catch(()=>[]),
+    ]);
+    const agg = aggregate(matches, account.puuid);
+    CURRENT_STATE = { account, mmr, agg, matches };
+    saveCache(CURRENT_STATE);
+    renderAllViews();
+    statusEl.textContent = `подключено ✓ (загружено ${matches.length} матчей)`;
+    refreshBtn.style.display = '';
+    setSidebarStatus(true, `${account.name}#${account.tag}`);
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = 'ошибка: ' + err.message;
+    if(userInitiated) alert('Не удалось получить статистику: ' + err.message + '\n\nПроверь Riot ID, регион и ключ.');
+    setSidebarStatus(false, 'ошибка подключения');
+  } finally {
+    connectBtn.disabled = false; if(refreshBtn) refreshBtn.disabled = false;
+  }
+}
+
+function renderAllViews(){
+  const puuid = CURRENT_STATE.account?.puuid;
+  const filtered = getFilteredMatches();
+  CURRENT_STATE.agg = aggregate(filtered, puuid);
+  populateActFilter();
+  populateMatchFilters(CURRENT_STATE.matches||[], puuid);
+  renderOverview(CURRENT_STATE);
+  renderMapsTable(CURRENT_STATE.agg);
+  renderAgentsTable(CURRENT_STATE.agg);
+  renderMatches(filtered, puuid);
+  const activeBtn = document.querySelector('.side-item.active[data-view]');
+  const activeView = activeBtn ? activeBtn.dataset.view : 'overview';
+  document.getElementById('globalFilterBar').style.display = VIEWS_WITH_FILTERBAR.includes(activeView) && CURRENT_STATE.account ? 'flex' : 'none';
+}
+
+/* ---------- filter bar wiring ---------- */
+document.getElementById('queueChips').addEventListener('click', (e)=>{
+  const chip = e.target.closest('.chip[data-mode]');
+  if(!chip) return;
+  document.querySelectorAll('#queueChips .chip').forEach(c=>c.classList.remove('active'));
+  chip.classList.add('active');
+  FILTERS.mode = chip.dataset.mode;
+  renderAllViews();
+});
+document.getElementById('actFilter').addEventListener('change', (e)=>{
+  FILTERS.season = e.target.value;
+  renderAllViews();
+});
+document.getElementById('matchAgentFilter').addEventListener('change', ()=> renderMatches(getFilteredMatches(), CURRENT_STATE.account?.puuid));
+document.getElementById('matchMapFilter').addEventListener('change', ()=> renderMatches(getFilteredMatches(), CURRENT_STATE.account?.puuid));
+
+/* ---------- nav ---------- */
+const VIEWS_WITH_FILTERBAR = ['overview','maps','agents','matches'];
+function switchView(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  document.querySelectorAll('.side-item[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
+  document.getElementById('globalFilterBar').style.display = VIEWS_WITH_FILTERBAR.includes(view) && CURRENT_STATE.account ? 'flex' : 'none';
+}
+document.querySelectorAll('.side-item[data-view]').forEach(btn=>{
+  btn.addEventListener('click', ()=> switchView(btn.dataset.view));
+});
+document.getElementById('sidebarToggle').addEventListener('click', ()=>{
+  document.getElementById('sidebar').classList.toggle('collapsed');
+});
+
+/* ---------- settings form ---------- */
+function initSettingsForm(){
+  const cfg = loadCfg();
+  document.getElementById('cfgRiotId').value = cfg.riotId || '';
+  document.getElementById('cfgRegion').value = cfg.region || 'eu';
+  document.getElementById('cfgApiKey').value = cfg.apiKey || '';
+  document.getElementById('cfgSize').value = String(cfg.size || 20);
+
+  document.getElementById('connectBtn').addEventListener('click', async ()=>{
+    const riotId = document.getElementById('cfgRiotId').value.trim();
+    const region = document.getElementById('cfgRegion').value;
+    const apiKey = document.getElementById('cfgApiKey').value.trim();
+    const size = parseInt(document.getElementById('cfgSize').value, 10);
+    const statusEl = document.getElementById('cfgStatus');
+    if(!riotId.includes('#')){ statusEl.textContent = 'укажи Riot ID в формате Имя#Тег'; return; }
+    if(!apiKey){ statusEl.textContent = 'нужен API-ключ HenrikDev'; return; }
+    saveCfg({riotId, region, apiKey, size});
+    await refreshAll(true);
+  });
+  document.getElementById('refreshBtn').addEventListener('click', ()=> refreshAll(true));
+}
+
+/* ---------- player search (any Riot ID, uses saved API key) ---------- */
+async function fetchProfileBundle(riotId, region, apiKey){
+  const cfgLike = { riotId, region, apiKey, size: 20 };
+  const [account, mmr, matches] = await Promise.all([
+    fetchAccount(cfgLike),
+    fetchMMR(cfgLike).catch(()=>null),
+    fetchMatches(cfgLike).catch(()=>[]),
+  ]);
+  const agg = aggregate(matches, account.puuid);
+  return { account, mmr, matches, agg };
+}
+
+function renderSearchResult(bundle){
+  const wrap = document.getElementById('searchResults');
+  const { account, mmr, agg } = bundle;
+  const cur = mmr?.current || mmr?.current_data || {};
+  const peak = mmr?.peak || mmr?.highest_rank || {};
+  const cardArt = account.card && (account.card.small || account.card.large);
+  const rankImg = cur.images?.small || cur.images?.large;
+  const wins = agg.form.filter(f=>f.win===true).length;
+  const total = agg.totalGames || 1;
+
+  wrap.innerHTML = '';
+  wrap.appendChild(el(`
+    <div class="profile-card" style="margin-top:16px;">
+      <div class="profile-banner"></div>
+      <div class="profile-body">
+        <div class="profile-avatar-wrap">
+          <div class="profile-id">
+            <div class="profile-avatar" style="${cardArt?`background-image:url(${cardArt});background-size:cover;`:''}">${cardArt?'':'🎯'}</div>
+            <div>
+              <div class="profile-name">${account.name||'—'}<span class="profile-tag">#${account.tag||''}</span></div>
+              <div class="profile-level">${account.account_level?`Уровень ${account.account_level}`:''}</div>
+            </div>
+          </div>
+          <div class="rank-block">
+            <div class="rank-text">
+              <div class="rank-name">${cur.tier?.name || cur.currenttierpatched || 'Без ранга'}</div>
+              <div class="rank-rr">${(cur.rr ?? cur.ranking_in_tier) != null ? (cur.rr ?? cur.ranking_in_tier)+' RR' : ''}</div>
+            </div>
+            <div class="rank-icon" style="${rankImg?`background-image:url(${rankImg});`:''}"></div>
+          </div>
+        </div>
+        <div class="stats-row" style="margin-top:22px;">
+          <div class="stat"><div class="stat-label">Пиковый ранг</div><div class="stat-value">${peak.tier?.name || peak.patched_tier || '—'}</div></div>
+          <div class="stat"><div class="stat-label">Винрейт (посл. матчи)</div><div class="stat-value accent">${agg.totalGames?`${(wins/total*100).toFixed(0)}%`:'—'}</div></div>
+          <div class="stat"><div class="stat-label">Матчей загружено</div><div class="stat-value">${agg.totalGames}</div></div>
+          <div class="stat"><div class="stat-label">PUUID</div><div class="stat-value" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text-faint);">${account.puuid?account.puuid.slice(0,8)+'…':'—'}</div></div>
+        </div>
+      </div>
+    </div>
+  `));
+
+  const topAgentsWrap = el('<div></div>');
+  wrap.appendChild(el('<div class="section-label">Топ агенты</div>'));
+  const agentsTable = el('<div class="meta-table"></div>');
+  wrap.appendChild(agentsTable);
+  const agentRows = Object.entries(agg.agents).sort((a,b)=>b[1].games-a[1].games).slice(0,5);
+  if(!agentRows.length){ agentsTable.innerHTML = '<div class="empty-state">нет матчей</div>'; }
+  agentRows.forEach(([name,o])=>{
+    const wr = (o.wins/o.games*100).toFixed(0);
+    const img = AGENTS[name]?.icon;
+    const bm = bestMap(o);
+    const bmImg = bm ? MAPS[bm.name]?.icon : null;
+    agentsTable.appendChild(el(`
+      <div class="meta-row">
+        <div class="meta-avatar round">${img?`<img src="${img}" alt="${name}">`:''}</div>
+        <div class="meta-name">${name}<div class="meta-sub">${o.games} матчей</div></div>
+        <div class="meta-col" style="flex:1;">${kda(o)}</div>
+        <div class="meta-col wr" style="flex:1;">${wr}%</div>
+        <div class="best-map-badge small">${bm?`${bmImg?`<img src="${bmImg}" alt="${bm.name}">`:''}${bm.name}<span class="wr">${bm.wr}%</span>`:'—'}</div>
+      </div>
+    `));
+  });
+
+  wrap.appendChild(el('<div class="section-label">Последние матчи</div>'));
+  const matchesWrap = el('<div></div>');
+  wrap.appendChild(matchesWrap);
+  (bundle.matches||[]).slice(0,10).forEach(match=>{
+    const players = matchPlayers(match);
+    const me = players.find(p=>p.puuid===account.puuid);
+    if(!me) return;
+    const mapName = match.metadata?.map?.name || match.metadata?.map || 'Unknown';
+    const won = matchWonForTeam(match, me.team_id || me.team);
+    const st = playerStats(me);
+    const agentName = me.agent?.name || me.character?.name || me.character || 'Unknown';
+    const mapImg = MAPS[mapName]?.icon;
+    const agentImg = AGENTS[agentName]?.icon;
+    matchesWrap.appendChild(el(`
+      <div class="match-row ${won===true?'win':won===false?'loss':''}">
+        <div class="match-map" style="${mapImg?`background-image:url(${mapImg});`:''}"></div>
+        <div class="match-mid">
+          <div class="match-mode">${match.metadata?.mode||''}</div>
+          <div class="match-mapname">${mapName}</div>
+          <div class="match-agent" style="margin-top:6px;">
+            <div class="meta-avatar round" style="width:22px;height:22px;">${agentImg?`<img src="${agentImg}" alt="${agentName}">`:''}</div>
+            <span class="meta-sub" style="font-size:11px;">${agentName}</span>
+          </div>
+        </div>
+        <div class="match-result ${won===true?'win':won===false?'loss':''}">${won===true?'ПОБЕДА':won===false?'ПОРАЖЕНИЕ':'—'}</div>
+        <div class="match-stats">
+          <div class="match-stat"><div class="match-stat-val">${st.kills}/${st.deaths}/${st.assists}</div><div class="match-stat-lbl">KDA</div></div>
+        </div>
+      </div>
+    `));
+  });
+}
+
+document.getElementById('searchBtn').addEventListener('click', async ()=>{
+  const riotId = document.getElementById('searchRiotId').value.trim();
+  const region = document.getElementById('searchRegion').value;
+  const cfg = loadCfg();
+  const wrap = document.getElementById('searchResults');
+  if(!riotId.includes('#')){ wrap.innerHTML = '<div class="empty-state">укажи Riot ID в формате Имя#Тег</div>'; return; }
+  if(!cfg.apiKey){ wrap.innerHTML = '<div class="empty-state">сначала укажи API-ключ HenrikDev в Настройках</div>'; return; }
+  wrap.innerHTML = '<div class="empty-state"><span class="spinner" style="margin:0 auto 10px;display:inline-block;"></span><br>ищу игрока...</div>';
+  try{
+    const bundle = await fetchProfileBundle(riotId, region, cfg.apiKey);
+    renderSearchResult(bundle);
+  }catch(err){
+    wrap.innerHTML = `<div class="empty-state">ошибка: ${err.message}</div>`;
+  }
+});
+
+/* ---------- boot ---------- */
+(async function init(){
+  initSettingsForm();
+  await Promise.all([loadGameData(), loadSeasons()]);
+  const cached = loadCache();
+  if(cached){ CURRENT_STATE = cached; renderAllViews(); }
+  const cfg = loadCfg();
+  if(cfg.riotId && cfg.apiKey){
+    setSidebarStatus(!!cached, cached ? `${cached.account?.name}#${cached.account?.tag}` : 'обновляю...');
+    document.getElementById('refreshBtn').style.display = '';
+    document.getElementById('cfgStatus').textContent = cached ? 'сохранено — обновляю в фоне...' : 'подключаюсь...';
+    refreshAll(false);
+  } else {
+    switchView('settings');
+    setSidebarStatus(false, 'не подключено');
+  }
+})();
+</script>
+</body>
+</html>
