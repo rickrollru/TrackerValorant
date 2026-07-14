@@ -133,6 +133,35 @@
     .stats-row{ grid-template-columns:repeat(2, 1fr); row-gap:16px; }
     .stat:nth-child(3){ border-left:none; padding-left:0; }
   }
+  @media (max-width:640px){
+    .meta-col{ min-width:34px; font-size:11px; }
+    .meta-col.hide-sm{ display:none; }
+    .meta-name{ font-size:12.5px; }
+    .meta-name .meta-sub{ font-size:9px; }
+    .meta-row, .meta-head-row{ padding:10px 12px; gap:8px; }
+    .meta-avatar{ width:32px; height:32px; }
+    .best-map-badge.small{ display:none; }
+  }
+  @media (max-width:520px){
+    .filter-row{ flex-direction:column; align-items:stretch; }
+    .icon-select{ width:100%; }
+    .icon-select-btn{ min-width:0; width:100%; }
+    .icon-select-menu{ left:0; right:0; min-width:0; width:100%; }
+    .search-row{ flex-direction:column; }
+    .search-row .settings-input, .search-row select{ min-width:0; width:100%; }
+    .search-row button{ width:100%; }
+    .filter-bar{ padding:10px; }
+    .queue-chips{ width:100%; }
+    #actFilter{ max-width:none !important; width:100%; }
+    .modal-overlay{ padding:0; align-items:stretch; }
+    .modal-box{ max-width:none; width:100%; margin-bottom:0; border-radius:0; min-height:100vh; }
+    .modal-head{ padding:18px 16px 16px; }
+    .modal-title{ font-size:16.5px; }
+    .modal-score{ font-size:19px; }
+    .modal-body{ padding:14px 14px 26px; }
+    .profile-avatar-wrap{ justify-content:flex-start; }
+    .rank-block{ margin-left:auto; }
+  }
 
   .view{ display:none; animation: softFadeIn .3s ease; }
   .view.active{ display:block; }
@@ -402,6 +431,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
       <span>Агенты</span>
     </button>
+    <button class="side-item" data-view="weapons">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 4l6 6-9 9-6-6z"/><path d="M14 4l2 2M6 15l3 3"/><path d="M4 20l3-3"/></svg>
+      <span>Оружие</span>
+    </button>
     <button class="side-item" data-view="matches">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M11 20V4M18 20v-7"/></svg>
       <span>Матчи</span>
@@ -485,6 +518,9 @@
 
         <div class="section-label">Топ-3 агента</div>
         <div class="meta-table" id="overviewAgentsTable"><div class="empty-state">нет данных</div></div>
+
+        <div class="section-label">Любимое оружие</div>
+        <div class="meta-table" id="overviewWeaponsTable"><div class="empty-state">нет данных</div></div>
       </div>
     </section>
 
@@ -513,6 +549,20 @@
         <div class="meta-table" id="agentsTable"><div class="empty-state">нет данных — подключи аккаунт в Настройках</div></div>
       </div>
     </section>
+
+    <!-- ================= WEAPONS ================= -->
+    <section id="view-weapons" class="view">
+      <div class="wrap">
+        <div class="statusbar">
+          <div class="eyebrow">‖ личная статистика</div>
+          <h1>Статистика по оружию</h1>
+          <div class="settings-row-desc" style="margin:-14px 0 0;">сколько убийств и какой процент от всех твоих фрагов приходится на каждое оружие (по данным из загруженных матчей)</div>
+        </div>
+        <div class="section-label">Оружие</div>
+        <div class="meta-table" id="weaponsTable"><div class="empty-state">нет данных — подключи аккаунт в Настройках</div></div>
+      </div>
+    </section>
+
 
     <!-- ================= MATCHES ================= -->
     <section id="view-matches" class="view">
@@ -610,13 +660,15 @@
           </div>
           <div class="settings-divider"></div>
           <div class="settings-row">
-            <div><div class="settings-row-label">Сколько матчей подгружать</div><div class="settings-row-desc">больше матчей = точнее статистика по картам/агентам, но дольше грузится</div></div>
+            <div><div class="settings-row-label">Сколько матчей подгружать</div><div class="settings-row-desc">матчи грузятся страницами по 10 — чем больше выберешь, тем точнее статистика, но тем дольше обновление и больше запросов к API (следи за лимитом ключа)</div></div>
             <div class="settings-control">
               <select class="settings-input" id="cfgSize">
                 <option value="10">10</option>
                 <option value="20" selected>20</option>
                 <option value="30">30</option>
                 <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
               </select>
             </div>
           </div>
@@ -670,15 +722,17 @@ async function api(path, key){
 }
 
 /* ---------- game data (agent/map icons) from valorant-api.com (no key needed) ---------- */
-let AGENTS = {}, MAPS = {};
+let AGENTS = {}, MAPS = {}, WEAPONS = {};
 async function loadGameData(){
   try{
-    const [aRes, mRes] = await Promise.all([
+    const [aRes, mRes, wRes] = await Promise.all([
       fetch('https://valorant-api.com/v1/agents?isPlayableCharacter=true&language=ru-RU').then(r=>r.json()),
       fetch('https://valorant-api.com/v1/maps?language=ru-RU').then(r=>r.json()),
+      fetch('https://valorant-api.com/v1/weapons').then(r=>r.json()),
     ]);
     (aRes.data||[]).forEach(a=>{ AGENTS[a.displayName] = { icon: a.displayIconSmall || a.displayIcon, role: a.role?.displayName || '' }; });
     (mRes.data||[]).forEach(m=>{ MAPS[m.displayName] = { splash: m.splash, icon: m.listViewIcon || m.splash }; });
+    (wRes.data||[]).forEach(w=>{ WEAPONS[w.displayName] = { icon: w.displayIcon, category: (w.category||'').replace('EEquippableCategory::','') }; });
   }catch(e){ console.warn('game data load failed', e); }
 }
 
@@ -693,10 +747,23 @@ async function fetchMMR(cfg){
   const json = await api(`/valorant/v3/mmr/${cfg.region}/pc/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`, cfg.apiKey);
   return json.data;
 }
-async function fetchMatches(cfg){
+async function fetchMatches(cfg, onProgress){
   const [name, tag] = cfg.riotId.split('#');
-  const json = await api(`/valorant/v4/matches/${cfg.region}/pc/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?size=${cfg.size||20}`, cfg.apiKey);
-  return json.data || [];
+  const target = cfg.size || 20;
+  const PAGE = 10; // chunk size — safest value across all key tiers; we page instead of trusting a big size= to be honored in one shot
+  let all = [];
+  let start = 0;
+  while(all.length < target){
+    const json = await api(`/valorant/v4/matches/${cfg.region}/pc/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?size=${PAGE}&start=${start}`, cfg.apiKey);
+    const batch = json.data || [];
+    if(!batch.length) break;
+    all = all.concat(batch);
+    if(onProgress) onProgress(all.length, target);
+    if(batch.length < PAGE) break; // server has no more matches to give us
+    start += PAGE;
+    if(start >= 300) break; // hard safety stop
+  }
+  return all.slice(0, target);
 }
 
 /* ---------- helpers to read match JSON defensively (HenrikDev v4 shape, with v3-ish fallbacks) ---------- */
@@ -754,9 +821,23 @@ function getTeamsInfo(match){
 }
 
 /* ---------- aggregation: per-map & per-agent personal stats ---------- */
+function matchKillEvents(match){
+  if(Array.isArray(match.kills)) return match.kills;
+  if(Array.isArray(match.kill_events)) return match.kill_events;
+  return [];
+}
+function killWeaponLabel(k){
+  const raw = k.damage_weapon_name || k.weapon?.name || k.weapon_name || k.damage_weapon?.name || '';
+  return raw && raw.trim() ? raw : 'Способность / нож';
+}
+function killKillerPuuid(k){
+  return k.killer_puuid || k.killer?.puuid || (typeof k.killer === 'string' ? k.killer : null);
+}
+
 function aggregate(matches, puuid){
-  const maps = {}, agents = {};
+  const maps = {}, agents = {}, weapons = {};
   let totalGames = 0;
+  let totalKillEvents = 0;
   const form = []; // most recent first: {win, map, agent}
 
   matches.forEach(match=>{
@@ -779,6 +860,14 @@ function aggregate(matches, puuid){
     form.push({ win: won, map: mapName, agent: agentName, mode });
 
     const adr = roundsPlayed ? st.damage / roundsPlayed : 0;
+
+    matchKillEvents(match).forEach(k=>{
+      if(killKillerPuuid(k) !== puuid) return;
+      const w = killWeaponLabel(k);
+      if(!weapons[w]) weapons[w] = { kills:0 };
+      weapons[w].kills++;
+      totalKillEvents++;
+    });
 
     if(!maps[mapName]) maps[mapName] = { games:0, wins:0, kills:0, deaths:0, assists:0, acs:0, hs:0, adr:0 };
     Object.assign(maps[mapName], {
@@ -808,8 +897,9 @@ function aggregate(matches, puuid){
     bm[mapName].games++; if(won) bm[mapName].wins++;
   });
 
-  return { maps, agents, totalGames, form };
+  return { maps, agents, weapons, totalGames, totalKillEvents, form };
 }
+
 
 function kda(o){ return `${(o.kills/o.games).toFixed(1)}/${(o.deaths/o.games).toFixed(1)}/${(o.assists/o.games).toFixed(1)}`; }
 function kdRatio(o){ return o.deaths ? (o.kills/o.deaths) : o.kills; }
@@ -873,9 +963,29 @@ function renderOverview(state){
     });
   } else { formEmpty.style.display=''; }
 
-  // top 3 maps / agents mini tables
+  // top 3 maps / agents / weapons mini tables
   renderMiniTable('overviewMapsTable', agg.maps, agg.totalGames, 'map');
   renderMiniTable('overviewAgentsTable', agg.agents, agg.totalGames, 'agent');
+  renderMiniWeaponsTable('overviewWeaponsTable', agg.weapons, agg.totalKillEvents);
+}
+
+function renderMiniWeaponsTable(containerId, dict, totalKills){
+  const rows = Object.entries(dict).sort((a,b)=>b[1].kills-a[1].kills).slice(0,3);
+  const container = document.getElementById(containerId);
+  if(!rows.length){ container.innerHTML = '<div class="empty-state">нет данных</div>'; return; }
+  container.innerHTML = '';
+  rows.forEach(([name,o])=>{
+    const pct = (o.kills/(totalKills||1)*100).toFixed(0);
+    const img = WEAPONS[name]?.icon;
+    container.appendChild(el(`
+      <div class="meta-row">
+        <div class="meta-avatar">${img?`<img src="${img}" alt="${name}">`:'🔫'}</div>
+        <div class="meta-name">${name}<div class="meta-sub">${o.kills} убийств</div></div>
+        <div class="meta-bar-wrap"><div class="meta-bar"><div class="meta-bar-fill" style="width:${pct}%;"></div></div></div>
+        <div class="meta-col wr">${pct}%</div>
+      </div>
+    `));
+  });
 }
 
 function renderMiniTable(containerId, dict, total, kind){
@@ -944,10 +1054,10 @@ function renderMapsTable(agg){
     <div class="meta-head-row">
       <div style="flex:2;">Карта</div>
       <div class="meta-col" style="flex:1;">${headCell('Матчи','games',SORT_STATE.maps)}</div>
-      <div class="meta-col" style="flex:1;">${headCell('Пикрейт','pickrate',SORT_STATE.maps)}</div>
+      <div class="meta-col hide-sm" style="flex:1;">${headCell('Пикрейт','pickrate',SORT_STATE.maps)}</div>
       <div class="meta-col" style="flex:1;">${headCell('K/D/A','kda',SORT_STATE.maps)}</div>
       <div class="meta-col" style="flex:1;">${headCell('ADR','adr',SORT_STATE.maps)}</div>
-      <div class="meta-col" style="flex:1;">${headCell('ACS','acs',SORT_STATE.maps)}</div>
+      <div class="meta-col hide-sm" style="flex:1;">${headCell('ACS','acs',SORT_STATE.maps)}</div>
       <div class="meta-col wr" style="flex:1;">${headCell('Винрейт','wr',SORT_STATE.maps)}</div>
     </div>
   `);
@@ -962,10 +1072,10 @@ function renderMapsTable(agg){
         <div class="meta-avatar">${img?`<img src="${img}" alt="${name}">`:''}</div>
         <div class="meta-name">${name}</div>
         <div class="meta-col" style="flex:1;">${o.games}</div>
-        <div class="meta-col" style="flex:1;">${pr}%</div>
+        <div class="meta-col hide-sm" style="flex:1;">${pr}%</div>
         <div class="meta-col" style="flex:1;">${kda(o)}</div>
         <div class="meta-col" style="flex:1;">${(o.adr/o.games).toFixed(0)}</div>
-        <div class="meta-col" style="flex:1;">${(o.acs/o.games).toFixed(0)}</div>
+        <div class="meta-col hide-sm" style="flex:1;">${(o.acs/o.games).toFixed(0)}</div>
         <div class="meta-col wr" style="flex:1;">${wr}%</div>
       </div>
     `));
@@ -982,10 +1092,10 @@ function renderAgentsTable(agg){
     <div class="meta-head-row">
       <div style="flex:2;">Агент</div>
       <div class="meta-col" style="flex:1;">${headCell('Матчи','games',SORT_STATE.agents)}</div>
-      <div class="meta-col" style="flex:1;">${headCell('Пикрейт','pickrate',SORT_STATE.agents)}</div>
+      <div class="meta-col hide-sm" style="flex:1;">${headCell('Пикрейт','pickrate',SORT_STATE.agents)}</div>
       <div class="meta-col" style="flex:1;">${headCell('K/D/A','kda',SORT_STATE.agents)}</div>
       <div class="meta-col" style="flex:1;">${headCell('ADR','adr',SORT_STATE.agents)}</div>
-      <div class="meta-col" style="flex:1;">${headCell('HS%','hs',SORT_STATE.agents)}</div>
+      <div class="meta-col hide-sm" style="flex:1;">${headCell('HS%','hs',SORT_STATE.agents)}</div>
       <div class="meta-col wr" style="flex:1;">${headCell('Винрейт','wr',SORT_STATE.agents)}</div>
       <div class="meta-col small">Лучшая карта</div>
     </div>
@@ -1003,12 +1113,50 @@ function renderAgentsTable(agg){
         <div class="meta-avatar round">${img?`<img src="${img}" alt="${name}">`:''}</div>
         <div class="meta-name">${name}<div class="meta-sub">${AGENTS[name]?.role||''}</div></div>
         <div class="meta-col" style="flex:1;">${o.games}</div>
-        <div class="meta-col" style="flex:1;">${pr}%</div>
+        <div class="meta-col hide-sm" style="flex:1;">${pr}%</div>
         <div class="meta-col" style="flex:1;">${kda(o)}</div>
         <div class="meta-col" style="flex:1;">${(o.adr/o.games).toFixed(0)}</div>
-        <div class="meta-col" style="flex:1;">${(o.hs/o.games).toFixed(0)}%</div>
+        <div class="meta-col hide-sm" style="flex:1;">${(o.hs/o.games).toFixed(0)}%</div>
         <div class="meta-col wr" style="flex:1;">${wr}%</div>
         <div class="best-map-badge small">${bm?`${bmImg?`<img src="${bmImg}" alt="${bm.name}">`:''}${bm.name}<span class="wr">${bm.wr}%</span>`:'—'}</div>
+      </div>
+    `));
+  });
+}
+
+SORT_STATE.weapons = { field:'kills', dir:'desc' };
+function renderWeaponsTable(agg){
+  const container = document.getElementById('weaponsTable');
+  const allRows = Object.entries(agg.weapons);
+  if(!allRows.length){ container.innerHTML = '<div class="empty-state">нет данных — подключи аккаунт в Настройках</div>'; return; }
+  const total = agg.totalKillEvents || 1;
+  const mult = SORT_STATE.weapons.dir==='asc' ? 1 : -1;
+  const rows = allRows.slice().sort((a,b)=> mult*(a[1].kills-b[1].kills));
+  container.innerHTML = '';
+  const head = el(`
+    <div class="meta-head-row">
+      <div style="flex:2;">Оружие</div>
+      <div class="meta-col" style="flex:1;">${headCell('Убийств','kills',SORT_STATE.weapons)}</div>
+      <div class="meta-col wr" style="flex:2;">% от твоих фрагов</div>
+    </div>
+  `);
+  head.querySelectorAll('.sortable-col').forEach(span=>{
+    span.addEventListener('click', ()=>{
+      SORT_STATE.weapons.dir = SORT_STATE.weapons.dir==='asc' ? 'desc' : 'asc';
+      renderWeaponsTable(agg);
+    });
+  });
+  container.appendChild(head);
+  rows.forEach(([name,o])=>{
+    const pct = (o.kills/total*100).toFixed(1);
+    const img = WEAPONS[name]?.icon;
+    container.appendChild(el(`
+      <div class="meta-row">
+        <div class="meta-avatar">${img?`<img src="${img}" alt="${name}">`:'🔫'}</div>
+        <div class="meta-name">${name}</div>
+        <div class="meta-col" style="flex:1;">${o.kills}</div>
+        <div class="meta-bar-wrap" style="flex:2;"><div class="meta-bar"><div class="meta-bar-fill" style="width:${pct}%;"></div></div></div>
+        <div class="meta-col wr" style="flex:0.6;min-width:50px;">${pct}%</div>
       </div>
     `));
   });
@@ -1185,6 +1333,24 @@ function openMatchModal(match, puuid){
     });
   });
 
+  // weapon breakdown for me in this specific match
+  const myWeaponKills = {};
+  matchKillEvents(match).forEach(k=>{
+    if(killKillerPuuid(k) !== puuid) return;
+    const w = killWeaponLabel(k);
+    myWeaponKills[w] = (myWeaponKills[w]||0) + 1;
+  });
+  const weaponEntries = Object.entries(myWeaponKills).sort((a,b)=>b[1]-a[1]);
+  const weaponsHtml = weaponEntries.length ? `
+    <div class="modal-team-label">Твои убийства по оружию</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      ${weaponEntries.map(([name,n])=>`
+        <div class="best-map-badge" style="background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:20px;padding:6px 12px;">
+          ${WEAPONS[name]?.icon?`<img src="${WEAPONS[name].icon}" style="width:18px;height:18px;object-fit:contain;">`:''}
+          ${name}<span class="wr">×${n}</span>
+        </div>`).join('')}
+    </div>` : '';
+
   box.innerHTML = `
     <div class="modal-head" style="${mapImg?`background-image:linear-gradient(120deg, rgba(var(--accent-rgb),0.55), rgba(11,7,9,0.85)), url(${mapImg}); background-size:cover; background-position:center;`:''}">
       <button class="modal-close" id="matchModalClose">✕</button>
@@ -1192,7 +1358,7 @@ function openMatchModal(match, puuid){
       <div class="modal-title">${mapName}</div>
       <div class="modal-score ${won===true?'win':won===false?'loss':''}">${won===true?'ПОБЕДА':won===false?'ПОРАЖЕНИЕ':'—'} ${scoreStr?('· '+scoreStr):''}</div>
     </div>
-    <div class="modal-body">${teamsHtml || '<div class="empty-state">нет данных по игрокам</div>'}</div>
+    <div class="modal-body">${teamsHtml || '<div class="empty-state">нет данных по игрокам</div>'}${weaponsHtml}</div>
   `;
   overlay.classList.add('open');
   document.getElementById('matchModalClose').addEventListener('click', closeMatchModal);
@@ -1274,7 +1440,7 @@ async function refreshAll(userInitiated){
     const [account, mmr, matches] = await Promise.all([
       fetchAccount(cfg),
       fetchMMR(cfg).catch(()=>null),
-      fetchMatches(cfg).catch(()=>[]),
+      fetchMatches(cfg, (loaded, target)=>{ if(userInitiated) statusEl.textContent = `загружаю... ${loaded}/${target} матчей`; }).catch(()=>[]),
     ]);
     const agg = aggregate(matches, account.puuid);
     CURRENT_STATE = { account, mmr, agg, matches };
@@ -1302,6 +1468,7 @@ function renderAllViews(){
   renderOverview(CURRENT_STATE);
   renderMapsTable(CURRENT_STATE.agg);
   renderAgentsTable(CURRENT_STATE.agg);
+  renderWeaponsTable(CURRENT_STATE.agg);
   renderMatches(filtered, puuid);
   const activeBtn = document.querySelector('.side-item.active[data-view]');
   const activeView = activeBtn ? activeBtn.dataset.view : 'overview';
@@ -1325,7 +1492,7 @@ document.getElementById('matchAgentFilter').addEventListener('change', ()=> rend
 document.getElementById('matchMapFilter').addEventListener('change', ()=> renderMatches(getFilteredMatches(), CURRENT_STATE.account?.puuid));
 
 /* ---------- nav ---------- */
-const VIEWS_WITH_FILTERBAR = ['overview','maps','agents','matches'];
+const VIEWS_WITH_FILTERBAR = ['overview','maps','agents','weapons','matches'];
 function switchView(view){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
