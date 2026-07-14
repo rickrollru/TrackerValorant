@@ -660,7 +660,7 @@ function aggregate(matches, puuid){
     const totalShots = st.headshots + st.bodyshots + st.legshots;
     const hsPct = totalShots ? (st.headshots / totalShots * 100) : 0;
     const agentName = me.agent?.name || me.character?.name || me.character || 'Unknown';
-    const mode = match.metadata?.mode || match.metadata?.queue || '';
+    const mode = matchModeStr(match);
 
     totalGames++;
     form.push({ win: won, map: mapName, agent: agentName, mode });
@@ -899,7 +899,7 @@ function renderMatches(matches, puuid){
     const agentName = me.agent?.name || me.character?.name || me.character || 'Unknown';
     const mapImg = MAPS[mapName]?.icon;
     const agentImg = AGENTS[agentName]?.icon;
-    const mode = match.metadata?.mode || match.metadata?.queue || '';
+    const mode = matchModeStr(match);
     const roundsPlayed = match.metadata?.rounds_played || 1;
     const acs = (st.score/roundsPlayed).toFixed(0);
 
@@ -939,10 +939,17 @@ async function loadSeasons(){
   }catch(e){ console.warn('seasons load failed', e); }
 }
 
+function matchModeStr(m){
+  const raw = m.metadata?.mode ?? m.metadata?.queue ?? '';
+  if(typeof raw === 'string') return raw;
+  if(raw && typeof raw === 'object') return raw.name || raw.id || raw.mode || '';
+  return String(raw||'');
+}
+
 function getFilteredMatches(){
   const matches = CURRENT_STATE.matches || [];
   return matches.filter(m=>{
-    const mode = (m.metadata?.mode || m.metadata?.queue || '').toLowerCase().replace(/\s+/g,'');
+    const mode = matchModeStr(m).toLowerCase().replace(/\s+/g,'');
     if(FILTERS.mode !== 'all' && !mode.includes(FILTERS.mode.replace(/\s+/g,''))) return false;
     if(FILTERS.season !== 'all' && m.metadata?.season_id !== FILTERS.season) return false;
     return true;
@@ -1154,7 +1161,7 @@ function renderSearchResult(bundle){
       <div class="match-row ${won===true?'win':won===false?'loss':''}">
         <div class="match-map" style="${mapImg?`background-image:url(${mapImg});`:''}"></div>
         <div class="match-mid">
-          <div class="match-mode">${match.metadata?.mode||''}</div>
+          <div class="match-mode">${matchModeStr(match)}</div>
           <div class="match-mapname">${mapName}</div>
           <div class="match-agent" style="margin-top:6px;">
             <div class="meta-avatar round" style="width:22px;height:22px;">${agentImg?`<img src="${agentImg}" alt="${agentName}">`:''}</div>
