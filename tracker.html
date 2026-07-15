@@ -574,7 +574,14 @@
               <div class="stat"><div class="stat-label">Entry-фраги</div><div class="stat-value accent" id="pfEntryK">—</div></div>
               <div class="stat"><div class="stat-label">Entry-смерти</div><div class="stat-value" id="pfEntryD">—</div></div>
             </div>
-            <button class="file-btn ghost" id="exportPngBtn" style="margin-top:18px;">📸 Сохранить картинку со статой</button>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:18px; flex-wrap:wrap;">
+              <button class="file-btn ghost" id="exportPngBtn">📸 Сохранить картинку со статой</button>
+              <select id="exportSizeSelect" class="settings-input" style="width:auto; min-width:0; padding:9px 10px;" title="Разрешение экспорта">
+                <option value="1">Маленький (960×560)</option>
+                <option value="2" selected>Средний (1920×1120)</option>
+                <option value="3">Большой (2880×1680)</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -829,9 +836,22 @@ function saveCfg(cfg){ try{ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); 
 function loadCache(){ try{ return JSON.parse(localStorage.getItem(CACHE_KEY)||'null'); }catch(e){ return null; } }
 function saveCache(data){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify(data)); }catch(e){} }
 
-async function api(path, key){
+async function api(path, key, _retried){
   const res = await fetch(API_BASE + path, { headers:{ 'Accept':'application/json', 'Authorization':key } });
+
+  // 429 = we hit HenrikDev's per-key rate limit. Rather than fail outright, honor
+  // Retry-After (if sent) and retry exactly once — this smooths over the brief bursts
+  // that happen when several panels refresh at once, without hammering the API.
+  if(res.status === 429 && !_retried){
+    const retryAfterSec = parseInt(res.headers.get('Retry-After') || '2', 10);
+    await new Promise(r => setTimeout(r, Math.min(retryAfterSec, 10) * 1000));
+    return api(path, key, true);
+  }
+
   const json = await res.json().catch(()=>null);
+  if(res.status === 429){
+    throw new Error('превышен лимит запросов ключа (rate limit) — подожди немного и попробуй снова');
+  }
   if(!res.ok || !json || (json.status && json.status >= 400)){
     const msg = (json && (json.errors?.[0]?.message || json.message)) || `HTTP ${res.status}`;
     throw new Error(msg);
@@ -1795,28 +1815,14 @@ document.getElementById('sidebarToggle').addEventListener('click', ()=>{
   document.getElementById('sidebar').classList.toggle('collapsed');
 });
 
-/* ---------- settings form ---------- */
-function initSettingsForm(){
-  const cfg = loadCfg();
-  document.getElementById('cfgRiotId').value = cfg.riotId || '';
-  document.getElementById('cfgRegion').value = cfg.region || 'eu';
-  document.getElementById('cfgApiKey').value = cfg.apiKey || '';
-  document.getElementById('cfgSize').value = String(cfg.size || 20);
-
-  document.getElementById('connectBtn').addEventListener('click', async ()=>{
-    const riotId = document.getElementById('cfgRiotId').value.trim();
-    const region = document.getElementById('cfgRegion').value;
-    const apiKey = document.getElementById('cfgApiKey').value.trim();
-    const size = parseInt(document.getElementById('cfgSize').value, 10);
-    const statusEl = document.getElementById('cfgStatus');
-    if(!riotId.includes('#')){ statusEl.textContent = 'укажи Riot ID в формате Имя#Тег'; return; }
-    if(!apiKey){ statusEl.textContent = 'нужен API-ключ HenrikDev'; return; }
-    saveCfg({riotId, region, apiKey, size});
-    await refreshAll(true);
-  });
-/* ---------- manual refresh w/ cooldown, to protect the 30 req/min API key limit ---------- */
+/* ---------- manual refresh w/ cooldown, to protect the API key's rate limit ----------
+   NOTE: these live at top-level scope on purpose. They used to be nested inside
+   initSettingsForm(), which meant they only existed while that function was running —
+   any call from outside it (refreshAll(), the boot IIFE, setInterval) threw
+   "updateRefreshUI is not defined". Keeping them global fixes that. */
 const REFRESH_COOLDOWN_MS = 45000;
 const LAST_REFRESH_KEY = 'valostats:lastRefreshTs';
+
 function formatAgo(ts){
   if(!ts) return '—';
   const diff = Date.now() - ts;
@@ -1826,6 +1832,7 @@ function formatAgo(ts){
   if(diff < 86400000) return `${Math.floor(diff/3600000)} ч назад`;
   return `${Math.floor(diff/86400000)} дн назад`;
 }
+
 function updateRefreshUI(){
   const has = !!(CURRENT_STATE && CURRENT_STATE.account);
   document.getElementById('sbRefreshWrap').style.display = has ? '' : 'none';
@@ -1861,6 +1868,26 @@ async function manualRefresh(){
 document.getElementById('refreshBtn').addEventListener('click', manualRefresh);
 document.getElementById('sbRefreshBtn').addEventListener('click', manualRefresh);
 document.getElementById('mobileRefreshBtn').addEventListener('click', manualRefresh);
+
+/* ---------- settings form ---------- */
+function initSettingsForm(){
+  const cfg = loadCfg();
+  document.getElementById('cfgRiotId').value = cfg.riotId || '';
+  document.getElementById('cfgRegion').value = cfg.region || 'eu';
+  document.getElementById('cfgApiKey').value = cfg.apiKey || '';
+  document.getElementById('cfgSize').value = String(cfg.size || 20);
+
+  document.getElementById('connectBtn').addEventListener('click', async ()=>{
+    const riotId = document.getElementById('cfgRiotId').value.trim();
+    const region = document.getElementById('cfgRegion').value;
+    const apiKey = document.getElementById('cfgApiKey').value.trim();
+    const size = parseInt(document.getElementById('cfgSize').value, 10);
+    const statusEl = document.getElementById('cfgStatus');
+    if(!riotId.includes('#')){ statusEl.textContent = 'укажи Riot ID в формате Имя#Тег'; return; }
+    if(!apiKey){ statusEl.textContent = 'нужен API-ключ HenrikDev'; return; }
+    saveCfg({riotId, region, apiKey, size});
+    await refreshAll(true);
+  });
 }
 
 /* ---------- player search (any Riot ID, uses saved API key) ---------- */
@@ -2155,10 +2182,17 @@ async function exportStatsImage(){
     const agentUrl = AGENTS[s.topAgent]?.icon;
     const mapUrl = MAPS[s.topMap]?.icon;
 
+    // W/H stay the "logical" layout size — every draw call below still uses these
+    // coordinates. SCALE bumps up the actual pixel raster (and we scale the context
+    // to match), which is what makes the exported PNG sharp instead of soft/blurry.
     const W=960, H=560;
+    const SCALE = parseInt(document.getElementById('exportSizeSelect')?.value || '2', 10);
     const canvas = document.createElement('canvas');
-    canvas.width = W; canvas.height = H;
+    canvas.width = W * SCALE; canvas.height = H * SCALE;
     const ctx = canvas.getContext('2d');
+    ctx.scale(SCALE, SCALE);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     // background
     const grad = ctx.createLinearGradient(0,0,W,H);
@@ -2253,7 +2287,7 @@ async function exportStatsImage(){
     }
     const a = document.createElement('a');
     a.href = dataUrl;
-    a.download = `valostats-${account.name}-${account.tag}.png`;
+    a.download = `valostats-${account.name}-${account.tag}-${W*SCALE}x${H*SCALE}.png`;
     document.body.appendChild(a); a.click(); a.remove();
   } finally {
     btn.textContent = original; btn.disabled = false;
