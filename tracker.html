@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -447,6 +448,7 @@
 </style>
 </head>
 <body>
+<datalist id="knownPlayersList"></datalist>
 <div class="body-bg"></div>
 
 <div class="shell">
@@ -700,7 +702,7 @@
           <div class="eyebrow">‖ поиск игрока</div>
           <h1>Найти игрока</h1>
           <div class="search-row">
-            <input type="text" class="settings-input" id="searchRiotId" placeholder="Имя#Тег">
+            <input type="text" class="settings-input" id="searchRiotId" placeholder="Имя#Тег" list="knownPlayersList" autocomplete="off">
             <select class="settings-input" id="searchRegion" style="max-width:120px;">
               <option value="eu">EU</option>
               <option value="na">NA</option>
@@ -712,6 +714,7 @@
             <button class="file-btn" id="searchBtn">Найти</button>
           </div>
           <div class="settings-row-desc" style="margin-top:10px;">использует твой ключ HenrikDev из Настроек — можно искать любого игрока, не только себя</div>
+          <div class="settings-row-desc" style="margin-top:2px;">начни вводить имя — подставятся Riot ID, которые уже искал или сравнивал раньше (Riot не даёт публичный поиск по всем игрокам, так что это только твоя личная история)</div>
           <div class="filter-row" id="searchHistoryRow" style="margin-top:14px;"></div>
         </div>
         <div id="searchResults"></div>
@@ -725,14 +728,14 @@
           <div class="eyebrow">‖ сравнение</div>
           <h1>Сравнить игроков</h1>
           <div class="search-row">
-            <input type="text" class="settings-input" id="cmpRiotIdA" placeholder="Твой Riot ID: Имя#Тег">
+            <input type="text" class="settings-input" id="cmpRiotIdA" placeholder="Твой Riot ID: Имя#Тег" list="knownPlayersList" autocomplete="off">
             <select class="settings-input" id="cmpRegionA" style="max-width:110px;">
               <option value="eu">EU</option><option value="na">NA</option><option value="ap">AP</option>
               <option value="kr">KR</option><option value="latam">LATAM</option><option value="br">BR</option>
             </select>
           </div>
           <div class="search-row" style="margin-top:8px;">
-            <input type="text" class="settings-input" id="cmpRiotIdB" placeholder="С кем сравнить: Имя#Тег">
+            <input type="text" class="settings-input" id="cmpRiotIdB" placeholder="С кем сравнить: Имя#Тег" list="knownPlayersList" autocomplete="off">
             <select class="settings-input" id="cmpRegionB" style="max-width:110px;">
               <option value="eu">EU</option><option value="na">NA</option><option value="ap">AP</option>
               <option value="kr">KR</option><option value="latam">LATAM</option><option value="br">BR</option>
@@ -808,6 +811,16 @@
               <button class="file-btn ghost" id="refreshBtn" style="display:none;">Обновить</button>
             </div>
           </div>
+          <div class="settings-divider"></div>
+          <div class="settings-row" id="bgLoadRow" style="display:none;">
+            <div>
+              <div class="settings-row-label">Догрузка всей истории в фоне</div>
+              <div class="settings-row-desc" id="bgLoadStatus">жмёшь один раз — дальше сам потихоньку догружает матчи, не трогая лимит ключа для остального</div>
+            </div>
+            <div class="settings-control">
+              <button class="file-btn ghost" id="bgLoadBtn">Догрузить всю историю</button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -836,16 +849,34 @@ function saveCfg(cfg){ try{ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); 
 function loadCache(){ try{ return JSON.parse(localStorage.getItem(CACHE_KEY)||'null'); }catch(e){ return null; } }
 function saveCache(data){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify(data)); }catch(e){} }
 
-async function api(path, key, _retried){
+/* ---------- request queue: serializes + paces every HenrikDev call ----------
+   Compare (and anything else using Promise.all across multiple bundles) used to
+   fire several requests at the exact same instant. That's still "under 30/min" on
+   paper, but a lot of APIs rate-limit bursts/concurrency too, not just the per-minute
+   total — which is why the compare screen sometimes failed to load. Now every call
+   to api() goes through one FIFO queue with a fixed gap between requests, so nothing
+   ever goes out in a burst, no matter how many places in the app call api() at once. */
+const REQUEST_GAP_MS = 350;
+let _queueTail = Promise.resolve();
+function queued(task){
+  const run = _queueTail.then(task, task);
+  _queueTail = run.catch(()=>{});
+  return run;
+}
+
+async function api(path, key){
+  return queued(()=> apiAttempt(path, key, false));
+}
+
+async function apiAttempt(path, key, retried){
   const res = await fetch(API_BASE + path, { headers:{ 'Accept':'application/json', 'Authorization':key } });
 
-  // 429 = we hit HenrikDev's per-key rate limit. Rather than fail outright, honor
-  // Retry-After (if sent) and retry exactly once — this smooths over the brief bursts
-  // that happen when several panels refresh at once, without hammering the API.
-  if(res.status === 429 && !_retried){
+  // 429 = we hit HenrikDev's rate limit. Honor Retry-After (if sent) and retry once —
+  // this smooths over brief bursts instead of failing outright.
+  if(res.status === 429 && !retried){
     const retryAfterSec = parseInt(res.headers.get('Retry-After') || '2', 10);
     await new Promise(r => setTimeout(r, Math.min(retryAfterSec, 10) * 1000));
-    return api(path, key, true);
+    return apiAttempt(path, key, true);
   }
 
   const json = await res.json().catch(()=>null);
@@ -856,6 +887,7 @@ async function api(path, key, _retried){
     const msg = (json && (json.errors?.[0]?.message || json.message)) || `HTTP ${res.status}`;
     throw new Error(msg);
   }
+  await new Promise(r => setTimeout(r, REQUEST_GAP_MS)); // pace before the queue releases the next call
   return json;
 }
 
@@ -1749,14 +1781,26 @@ async function refreshAll(userInitiated){
       fetchMMR(cfg).catch(()=>null),
       fetchMatches(cfg, (loaded, target)=>{ if(userInitiated) statusEl.textContent = `загружаю... ${loaded}/${target} матчей`; }).catch(()=>[]),
     ]);
-    const agg = aggregate(matches, account.puuid);
-    CURRENT_STATE = { account, mmr, agg, matches, fetchedAt: Date.now() };
+    const sameAccount = CURRENT_STATE?.account?.puuid === account.puuid;
+    let mergedMatches = matches;
+    if(sameAccount && CURRENT_STATE.matches?.length > matches.length){
+      // the background backfill (if it ran) may have pulled in more history than this
+      // refresh re-fetched — keep that extra tail instead of throwing it away, since a
+      // plain overwrite here would silently undo everything the backfill did.
+      const freshIds = new Set(matches.map(m => m.metadata?.match_id));
+      const extraOld = CURRENT_STATE.matches.filter(m => !freshIds.has(m.metadata?.match_id));
+      mergedMatches = matches.concat(extraOld);
+    }
+    if(!sameAccount) saveBgLoadState({ active:false, have:0 }); // switched player — old backfill progress no longer applies
+    const agg = aggregate(mergedMatches, account.puuid);
+    CURRENT_STATE = { account, mmr, agg, matches: mergedMatches, fetchedAt: Date.now() };
     saveCache(CURRENT_STATE);
     renderAllViews();
     updateRefreshUI();
-    statusEl.textContent = `подключено ✓ (загружено ${matches.length} матчей)`;
+    statusEl.textContent = `подключено ✓ (загружено ${mergedMatches.length} матчей)`;
     refreshBtn.style.display = '';
     setSidebarStatus(true, `${account.name}#${account.tag}`);
+    rememberKnownPlayer(`${account.name}#${account.tag}`);
   }catch(err){
     console.error(err);
     statusEl.textContent = 'ошибка: ' + err.message;
@@ -1837,6 +1881,7 @@ function updateRefreshUI(){
   const has = !!(CURRENT_STATE && CURRENT_STATE.account);
   document.getElementById('sbRefreshWrap').style.display = has ? '' : 'none';
   document.getElementById('mobileRefreshWrap').style.display = has ? '' : 'none';
+  updateBgLoadUI();
   if(!has) return;
   const agoText = formatAgo(CURRENT_STATE.fetchedAt);
   document.getElementById('sbLastUpdated').textContent = agoText;
@@ -1866,6 +1911,100 @@ async function manualRefresh(){
   updateRefreshUI();
 }
 document.getElementById('refreshBtn').addEventListener('click', manualRefresh);
+
+/* ---------- background match backfill ----------
+   "Load once, keep filling in slowly" — after the user clicks the button, this keeps
+   asking for more match history at a slow, fixed pace instead of one big burst. It
+   shares the same api()/queued() pipeline as everything else, so it never competes
+   with a manual refresh or a search — it just quietly takes a turn every few seconds.
+   Progress and the "still running" flag are saved to localStorage so a page reload
+   picks up where it left off instead of restarting. */
+const BG_LOAD_STATE_KEY = 'valostats:bgLoad';
+const BG_LOAD_STEP_MS = 7000;   // ~8-9 requests/minute reserved for backfill — leaves plenty of the 30/min budget for everything else
+const BG_LOAD_PAGE = 50;        // matches requested per background step
+const BG_LOAD_CAP = 1000;       // sane ceiling — HenrikDev itself won't have unlimited history for most accounts anyway
+let bgLoadTimer = null;
+
+function loadBgLoadState(){ try{ return JSON.parse(localStorage.getItem(BG_LOAD_STATE_KEY)||'null') || {active:false, have:0}; }catch(e){ return {active:false, have:0}; } }
+function saveBgLoadState(s){ try{ localStorage.setItem(BG_LOAD_STATE_KEY, JSON.stringify(s)); }catch(e){} }
+
+function updateBgLoadUI(){
+  const row = document.getElementById('bgLoadRow');
+  const btn = document.getElementById('bgLoadBtn');
+  const statusEl = document.getElementById('bgLoadStatus');
+  const has = !!(CURRENT_STATE && CURRENT_STATE.account);
+  row.style.display = has ? '' : 'none';
+  if(!has) return;
+  const st = loadBgLoadState();
+  const have = CURRENT_STATE.matches?.length || 0;
+  if(st.active){
+    btn.textContent = 'Остановить догрузку';
+    statusEl.textContent = `догружаю в фоне... уже ${have} матчей (~1 запрос каждые ${BG_LOAD_STEP_MS/1000}с)`;
+  } else if(st.doneAt){
+    btn.textContent = 'Догрузить всю историю';
+    statusEl.textContent = `готово — загружено ${have} матчей, больше в истории нет`;
+  } else {
+    btn.textContent = 'Догрузить всю историю';
+    statusEl.textContent = 'жмёшь один раз — дальше сам потихоньку догружает матчи, не трогая лимит ключа для остального';
+  }
+}
+
+function stopBgLoad(){
+  if(bgLoadTimer){ clearTimeout(bgLoadTimer); bgLoadTimer = null; }
+  const st = loadBgLoadState();
+  st.active = false;
+  saveBgLoadState(st);
+  updateBgLoadUI();
+}
+
+function scheduleBgLoadStep(){
+  bgLoadTimer = setTimeout(bgLoadStep, BG_LOAD_STEP_MS);
+}
+
+async function bgLoadStep(){
+  const st = loadBgLoadState();
+  if(!st.active || !CURRENT_STATE?.account){ stopBgLoad(); return; }
+  const cfg = loadCfg();
+  const have = CURRENT_STATE.matches?.length || 0;
+  if(have >= BG_LOAD_CAP){ st.active = false; st.doneAt = Date.now(); saveBgLoadState(st); updateBgLoadUI(); return; }
+  try{
+    const [name, tag] = cfg.riotId.split('#');
+    const want = Math.min(BG_LOAD_PAGE, BG_LOAD_CAP - have);
+    const json = await api(`/valorant/v4/matches/${cfg.region}/pc/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?size=${want}&start=${have}`, cfg.apiKey);
+    const batch = json.data || [];
+    if(!batch.length){
+      // API confirms there's genuinely nothing more — stop, don't keep polling forever
+      st.active = false; st.doneAt = Date.now(); saveBgLoadState(st); updateBgLoadUI();
+      return;
+    }
+    const existingIds = new Set(CURRENT_STATE.matches.map(m => m.metadata?.match_id));
+    const fresh = batch.filter(m => !existingIds.has(m.metadata?.match_id));
+    CURRENT_STATE.matches = CURRENT_STATE.matches.concat(fresh);
+    CURRENT_STATE.agg = aggregate(CURRENT_STATE.matches, CURRENT_STATE.account.puuid);
+    saveCache(CURRENT_STATE);
+    renderAllViews();
+    st.have = CURRENT_STATE.matches.length;
+    saveBgLoadState(st);
+    updateBgLoadUI();
+  }catch(err){
+    console.warn('background backfill step failed, will retry next tick', err);
+    // don't stop on a transient error (e.g. a 429 that already retried once and still
+    // failed) — just try again next tick at the same slow pace
+  }
+  if(loadBgLoadState().active) scheduleBgLoadStep();
+}
+
+function toggleBgLoad(){
+  const st = loadBgLoadState();
+  if(st.active){
+    stopBgLoad();
+  } else {
+    saveBgLoadState({ active:true, have: CURRENT_STATE?.matches?.length || 0 });
+    updateBgLoadUI();
+    scheduleBgLoadStep();
+  }
+}
+document.getElementById('bgLoadBtn').addEventListener('click', toggleBgLoad);
 document.getElementById('sbRefreshBtn').addEventListener('click', manualRefresh);
 document.getElementById('mobileRefreshBtn').addEventListener('click', manualRefresh);
 
@@ -2000,7 +2139,31 @@ function renderSearchResult(bundle){
   });
 }
 
-/* ---------- search history ---------- */
+/* ---------- known-player autocomplete ----------
+   IMPORTANT CAVEAT: Riot doesn't expose (and HenrikDev doesn't offer) any endpoint
+   that searches "all possible names" for a partial match — that would mean anyone
+   could enumerate every Riot account by typing letters, which is exactly the kind of
+   thing Riot's data-privacy rules (the whole reason HenrikDev requires a key) exist to
+   prevent. There's no legitimate API this app could call for that.
+   What IS real: every Riot ID this app has ever looked up (search, compare, your own
+   connected account). This list remembers those and offers them as you type, so
+   re-searching someone you already checked is one keystroke instead of retyping the
+   full Name#Tag. */
+const KNOWN_PLAYERS_KEY = 'valostats:knownPlayers';
+function loadKnownPlayers(){ try{ return JSON.parse(localStorage.getItem(KNOWN_PLAYERS_KEY)||'[]'); }catch(e){ return []; } }
+function saveKnownPlayers(list){ try{ localStorage.setItem(KNOWN_PLAYERS_KEY, JSON.stringify(list.slice(0,50))); }catch(e){} }
+function rememberKnownPlayer(riotId){
+  if(!riotId || !riotId.includes('#')) return;
+  let list = loadKnownPlayers().filter(id => id.toLowerCase() !== riotId.toLowerCase());
+  list.unshift(riotId);
+  saveKnownPlayers(list);
+  renderKnownPlayersList();
+}
+function renderKnownPlayersList(){
+  const dl = document.getElementById('knownPlayersList');
+  dl.innerHTML = loadKnownPlayers().map(id => `<option value="${id}"></option>`).join('');
+}
+renderKnownPlayersList();
 const SEARCH_HISTORY_KEY = 'valostats:searchHistory';
 function loadSearchHistory(){ try{ return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY)||'[]'); }catch(e){ return []; } }
 function saveSearchHistory(list){ try{ localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(list.slice(0,10))); }catch(e){} }
@@ -2034,6 +2197,7 @@ async function runSearch(riotId, region){
     const bundle = await fetchProfileBundle(riotId, region, cfg.apiKey, cfg.size);
     renderSearchResult(bundle);
     pushSearchHistory(riotId, region);
+    rememberKnownPlayer(riotId);
   }catch(err){
     wrap.innerHTML = `<div class="empty-state">ошибка: ${err.message}</div>`;
   }
@@ -2138,6 +2302,8 @@ document.getElementById('cmpBtn').addEventListener('click', async ()=>{
       fetchProfileBundle(riotIdB, regionB, cfg.apiKey, 30),
     ]);
     renderCompare(bundleA, bundleB);
+    rememberKnownPlayer(riotIdA);
+    rememberKnownPlayer(riotIdB);
   }catch(err){
     wrap.innerHTML = `<div class="empty-state">ошибка: ${err.message}</div>`;
   }
@@ -2308,6 +2474,7 @@ document.getElementById('exportPngBtn').addEventListener('click', exportStatsIma
     updateRefreshUI();
     if(cached){
       document.getElementById('cfgStatus').textContent = `подключено ✓ (загружено ${cached.matches?.length||0} матчей) — обновлено ${formatAgo(cached.fetchedAt)}`;
+      if(loadBgLoadState().active) scheduleBgLoadStep(); // pick up backfill where it left off after a reload
     } else {
       document.getElementById('cfgStatus').textContent = 'подключаюсь...';
       refreshAll(false); // first-ever load with no local cache — one automatic fetch is needed to show anything at all
