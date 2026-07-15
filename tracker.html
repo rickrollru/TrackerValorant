@@ -108,6 +108,23 @@
   .sb-status .d{ width:7px; height:7px; border-radius:50%; background:var(--text-faint); flex-shrink:0; }
   .sb-status.on .d{ background:var(--win); box-shadow:0 0 8px rgba(97,194,110,0.6); }
   .sb-status.off .d{ background:var(--loss); }
+  .sb-refresh{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    margin:0 10px 10px; padding:8px 10px; background:rgba(0,0,0,0.22); border:1px solid var(--border);
+    border-radius:12px;
+  }
+  .sb-refresh-meta{ font-family:'IBM Plex Mono', monospace; font-size:9.5px; color:var(--text-faint); line-height:1.3; }
+  .sb-refresh-btn{
+    flex-shrink:0; width:30px; height:30px; border-radius:9px; border:1px solid var(--border);
+    background:rgba(var(--accent-rgb),0.12); color:var(--accent); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:all .2s ease;
+  }
+  .sb-refresh-btn svg{ width:15px; height:15px; transition:transform .5s ease; }
+  .sb-refresh-btn:hover:not(:disabled){ background:rgba(var(--accent-rgb),0.22); border-color:var(--accent); }
+  .sb-refresh-btn:disabled{ opacity:0.45; cursor:not-allowed; }
+  .sb-refresh-btn.spinning svg{ animation:spin360 .7s linear infinite; }
+  @keyframes spin360{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
+  @media (min-width:761px){ #mobileRefreshWrap{ display:none !important; } }
 
   @media (max-width:760px){
     .shell{ flex-direction:column; }
@@ -117,7 +134,7 @@
       padding:8px 6px; border-right:none; border-top:1px solid var(--border);
       z-index:50; gap:2px; background:rgba(var(--panel-rgb),0.92); backdrop-filter:blur(18px);
     }
-    .sidebar-brand, .sidebar-foot, .sb-status{ display:none; }
+    .sidebar-brand, .sidebar-foot, .sb-status, .sb-refresh{ display:none !important; }
     .sidebar-spacer{ display:none; }
     .side-item{ flex:1 1 0; flex-direction:column; gap:4px; font-size:9.5px; padding:8px 4px; border-radius:10px; min-width:0; }
     .side-item span{ line-height:1.1; }
@@ -220,7 +237,7 @@
   .profile-tag{ color:var(--text-faint); font-weight:500; }
   .profile-level{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--text-dim); margin-top:4px; }
   .rank-block{ display:flex; align-items:center; gap:10px; padding-bottom:6px; }
-  .rank-icon{ width:44px; height:44px; flex-shrink:0; background:rgba(0,0,0,0.2) center/contain no-repeat; border-radius:8px; }
+  .rank-icon{ width:44px; height:44px; flex-shrink:0; background:rgba(0,0,0,0.2) center/contain no-repeat; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:20px; }
   .rank-text{ text-align:right; }
   .rank-name{ font-family:'Sora', sans-serif; font-weight:600; font-size:14px; }
   .rank-rr{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--text-faint); }
@@ -238,6 +255,8 @@
   }
   .meta-avatar.round{ border-radius:50%; }
   .meta-avatar img{ width:100%; height:100%; object-fit:cover; }
+  .meta-avatar.weapon{ width:54px; background:rgba(0,0,0,0.32); }
+  .meta-avatar.weapon img{ object-fit:contain; padding:5px; }
   .meta-name{ flex:2; min-width:0; font-size:13.5px; font-weight:600; }
   .meta-sub{ font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--text-faint); margin-top:2px; }
   .meta-col{ flex:1; text-align:right; font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--text-dim); flex-shrink:0; min-width:56px; }
@@ -399,6 +418,28 @@
   .mp-row .mp-col{ flex:1; text-align:right; font-family:'IBM Plex Mono', monospace; color:var(--text-dim); min-width:44px; }
   @media (max-width:560px){ .mp-row .mp-col.hide-sm{ display:none; } }
 
+  /* ---------- COMPARE ---------- */
+  .cmp-heads{ display:flex; align-items:center; gap:14px; margin-bottom:18px; }
+  .cmp-head{ flex:1; display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; }
+  .cmp-avatar{ width:64px; height:64px; border-radius:14px; background:rgba(0,0,0,0.3) center/cover no-repeat; border:1px solid var(--border); }
+  .cmp-name{ font-family:'Sora', sans-serif; font-weight:700; font-size:14px; }
+  .cmp-rank{ display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--text-dim); }
+  .cmp-rank img{ width:18px; height:18px; object-fit:contain; }
+  .cmp-vs{ font-family:'Sora', sans-serif; font-weight:800; font-size:13px; color:var(--text-faint); flex-shrink:0; }
+  .cmp-table{ display:flex; flex-direction:column; gap:2px; }
+  .cmp-row{ display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid var(--border); }
+  .cmp-row:last-child{ border-bottom:none; }
+  .cmp-val{ font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--text-dim); text-align:center; padding:3px 6px; border-radius:6px; }
+  .cmp-val:first-child{ text-align:right; }
+  .cmp-val:last-child{ text-align:left; }
+  .cmp-val.better{ color:var(--win); font-weight:700; background:rgba(97,194,110,0.1); }
+  .cmp-label{ font-size:10.5px; color:var(--text-faint); text-align:center; text-transform:uppercase; letter-spacing:0.5px; }
+  @media (max-width:520px){
+    .cmp-row{ grid-template-columns:1fr; text-align:center; gap:2px; }
+    .cmp-val:first-child, .cmp-val:last-child{ text-align:center; }
+    .cmp-label{ order:-1; margin-bottom:2px; }
+  }
+
   /* ---------- SEARCH ---------- */
   .search-row{ display:flex; gap:10px; flex-wrap:wrap; }
   .search-row .settings-input{ flex:1; min-width:180px; }
@@ -435,6 +476,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 4l6 6-9 9-6-6z"/><path d="M14 4l2 2M6 15l3 3"/><path d="M4 20l3-3"/></svg>
       <span>Оружие</span>
     </button>
+    <button class="side-item" data-view="ranks">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 15a6 6 0 100-12 6 6 0 000 12z"/><path d="M8.5 13.5L7 22l5-3 5 3-1.5-8.5"/></svg>
+      <span>Ранги</span>
+    </button>
     <button class="side-item" data-view="matches">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M11 20V4M18 20v-7"/></svg>
       <span>Матчи</span>
@@ -443,8 +488,20 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
       <span>Поиск</span>
     </button>
+    <button class="side-item" data-view="compare">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v18M16 3v18"/><path d="M3 8h5M16 8h5M3 16h5M16 16h5"/></svg>
+      <span>Сравнение</span>
+    </button>
 
     <div class="sidebar-spacer"></div>
+    <div class="sb-refresh" id="sbRefreshWrap" style="display:none;">
+      <div class="sb-refresh-meta">
+        <span id="sbLastUpdated">—</span>
+      </div>
+      <button class="sb-refresh-btn" id="sbRefreshBtn" title="Обновить статистику">
+        <svg id="sbRefreshIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>
+      </button>
+    </div>
     <div class="sb-status off" id="sbStatus"><span class="d"></span><span id="sbStatusText">не подключено</span></div>
     <button class="side-item" data-view="settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.56V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.55 1.7 1.7 0 00-1.87.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.7 1.7 0 004.6 15a1.7 1.7 0 00-1.56-1H3a2 2 0 110-4h.09A1.7 1.7 0 004.6 9a1.7 1.7 0 00-.33-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06A1.7 1.7 0 009 4.6a1.7 1.7 0 001-1.56V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.56 1.7 1.7 0 001.87-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.7 1.7 0 0019.4 9a1.7 1.7 0 001.56 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.51 1z"/></svg>
@@ -478,6 +535,13 @@
           <button class="file-btn" style="margin-left:auto;" onclick="switchView('settings')">Настроить</button>
         </div>
 
+        <div class="sb-refresh" id="mobileRefreshWrap" style="display:none;margin:0 0 14px;">
+          <div class="sb-refresh-meta">Обновлено: <span id="mobileLastUpdated">—</span></div>
+          <button class="sb-refresh-btn" id="mobileRefreshBtn" title="Обновить статистику">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>
+          </button>
+        </div>
+
         <div class="profile-card" id="profileCard" style="display:none;">
           <div class="profile-banner"></div>
           <div class="profile-body">
@@ -504,6 +568,13 @@
               <div class="stat"><div class="stat-label">Средний KDA</div><div class="stat-value" id="pfKDA">—</div></div>
               <div class="stat"><div class="stat-label">Хедшот %</div><div class="stat-value" id="pfHS">—</div></div>
             </div>
+            <div class="stats-row" style="margin-top:18px;padding-top:16px;">
+              <div class="stat"><div class="stat-label">Средний закуп</div><div class="stat-value" id="pfLoadout">—</div></div>
+              <div class="stat"><div class="stat-label">Потрачено/матч</div><div class="stat-value" id="pfSpent">—</div></div>
+              <div class="stat"><div class="stat-label">Entry-фраги</div><div class="stat-value accent" id="pfEntryK">—</div></div>
+              <div class="stat"><div class="stat-label">Entry-смерти</div><div class="stat-value" id="pfEntryD">—</div></div>
+            </div>
+            <button class="file-btn ghost" id="exportPngBtn" style="margin-top:18px;">📸 Сохранить картинку со статой</button>
           </div>
         </div>
 
@@ -563,6 +634,26 @@
       </div>
     </section>
 
+    <!-- ================= RANKS ================= -->
+    <section id="view-ranks" class="view">
+      <div class="wrap">
+        <div class="statusbar">
+          <div class="eyebrow">‖ рейтинг</div>
+          <h1>История рангов</h1>
+          <div class="settings-row-desc" style="margin:-14px 0 0;">прогресс по актам — из данных MMR, без доп. запросов к API</div>
+        </div>
+        <div class="section-label">По актам</div>
+        <div class="meta-table" id="seasonalTable"><div class="empty-state">нет данных — подключи аккаунт в Настройках</div></div>
+
+        <div class="section-label" style="margin-top:24px;">RR по матчам</div>
+        <div class="statusbar" id="rrChartWrap">
+          <div class="settings-row-desc" style="margin-bottom:12px;">график строится по отдельному запросу истории RR — грузится по кнопке, чтобы не тратить лимит ключа зазря</div>
+          <button class="file-btn" id="loadRRHistoryBtn">Загрузить график RR</button>
+          <div id="rrChartHost" style="margin-top:16px;"></div>
+        </div>
+      </div>
+    </section>
+
 
     <!-- ================= MATCHES ================= -->
     <section id="view-matches" class="view">
@@ -617,6 +708,33 @@
           <div class="filter-row" id="searchHistoryRow" style="margin-top:14px;"></div>
         </div>
         <div id="searchResults"></div>
+      </div>
+    </section>
+
+    <!-- ================= COMPARE ================= -->
+    <section id="view-compare" class="view">
+      <div class="wrap">
+        <div class="statusbar">
+          <div class="eyebrow">‖ сравнение</div>
+          <h1>Сравнить игроков</h1>
+          <div class="search-row">
+            <input type="text" class="settings-input" id="cmpRiotIdA" placeholder="Твой Riot ID: Имя#Тег">
+            <select class="settings-input" id="cmpRegionA" style="max-width:110px;">
+              <option value="eu">EU</option><option value="na">NA</option><option value="ap">AP</option>
+              <option value="kr">KR</option><option value="latam">LATAM</option><option value="br">BR</option>
+            </select>
+          </div>
+          <div class="search-row" style="margin-top:8px;">
+            <input type="text" class="settings-input" id="cmpRiotIdB" placeholder="С кем сравнить: Имя#Тег">
+            <select class="settings-input" id="cmpRegionB" style="max-width:110px;">
+              <option value="eu">EU</option><option value="na">NA</option><option value="ap">AP</option>
+              <option value="kr">KR</option><option value="latam">LATAM</option><option value="br">BR</option>
+            </select>
+          </div>
+          <button class="file-btn" id="cmpBtn" style="margin-top:10px;">Сравнить</button>
+          <div class="settings-row-desc" style="margin-top:10px;">делает по 1-2 запроса на каждого игрока — используй по необходимости</div>
+        </div>
+        <div id="cmpResults"></div>
       </div>
     </section>
 
@@ -722,18 +840,26 @@ async function api(path, key){
 }
 
 /* ---------- game data (agent/map icons) from valorant-api.com (no key needed) ---------- */
-let AGENTS = {}, MAPS = {}, WEAPONS = {};
+let AGENTS = {}, MAPS = {}, WEAPONS = {}, TIER_ICONS = {};
 async function loadGameData(){
   try{
-    const [aRes, mRes, wRes] = await Promise.all([
+    const [aRes, mRes, wRes, tRes] = await Promise.all([
       fetch('https://valorant-api.com/v1/agents?isPlayableCharacter=true&language=ru-RU').then(r=>r.json()),
       fetch('https://valorant-api.com/v1/maps?language=ru-RU').then(r=>r.json()),
       fetch('https://valorant-api.com/v1/weapons').then(r=>r.json()),
+      fetch('https://valorant-api.com/v1/competitivetiers').then(r=>r.json()),
     ]);
     (aRes.data||[]).forEach(a=>{ AGENTS[a.displayName] = { icon: a.displayIconSmall || a.displayIcon, role: a.role?.displayName || '' }; });
     (mRes.data||[]).forEach(m=>{ MAPS[m.displayName] = { splash: m.splash, icon: m.listViewIcon || m.splash }; });
     (wRes.data||[]).forEach(w=>{ WEAPONS[w.displayName] = { icon: w.displayIcon, category: (w.category||'').replace('EEquippableCategory::','') }; });
+    // HenrikDev's MMR v3 endpoint only gives us a tier id/name, no image — build the icon lookup from the latest episode's tier table
+    const latestTierSet = (tRes.data||[])[(tRes.data||[]).length-1];
+    (latestTierSet?.tiers||[]).forEach(t=>{ TIER_ICONS[t.tier] = { small: t.smallIcon, large: t.largeIcon, color: t.color }; });
   }catch(e){ console.warn('game data load failed', e); }
+}
+function rankIconUrl(tierId){
+  if(tierId==null) return null;
+  return TIER_ICONS[tierId]?.large || TIER_ICONS[tierId]?.small || null;
 }
 
 /* ---------- fetching ---------- */
@@ -750,18 +876,18 @@ async function fetchMMR(cfg){
 async function fetchMatches(cfg, onProgress){
   const [name, tag] = cfg.riotId.split('#');
   const target = cfg.size || 20;
-  const PAGE = 10; // chunk size — safest value across all key tiers; we page instead of trusting a big size= to be honored in one shot
+  const MAX_PAGE = 50; // ask for as much as possible per call to minimize request count
   let all = [];
   let start = 0;
   while(all.length < target){
-    const json = await api(`/valorant/v4/matches/${cfg.region}/pc/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?size=${PAGE}&start=${start}`, cfg.apiKey);
+    const want = Math.min(target - all.length, MAX_PAGE);
+    const json = await api(`/valorant/v4/matches/${cfg.region}/pc/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?size=${want}&start=${start}`, cfg.apiKey);
     const batch = json.data || [];
-    if(!batch.length) break;
+    if(!batch.length) break; // API confirms there's genuinely nothing more
     all = all.concat(batch);
+    start += batch.length;
     if(onProgress) onProgress(all.length, target);
-    if(batch.length < PAGE) break; // server has no more matches to give us
-    start += PAGE;
-    if(start >= 300) break; // hard safety stop
+    if(start >= 500) break; // hard safety stop
   }
   return all.slice(0, target);
 }
@@ -824,7 +950,11 @@ function getTeamsInfo(match){
 function matchKillEvents(match){
   if(Array.isArray(match.kills)) return match.kills;
   if(Array.isArray(match.kill_events)) return match.kill_events;
-  return [];
+  // some API shapes nest kill feed per-player instead of at match level
+  const players = matchPlayers(match);
+  let all = [];
+  players.forEach(p=>{ if(Array.isArray(p.kills)) all = all.concat(p.kills); });
+  return all;
 }
 function killWeaponLabel(k){
   const raw = k.damage_weapon_name || k.weapon?.name || k.weapon_name || k.damage_weapon?.name || '';
@@ -833,11 +963,44 @@ function killWeaponLabel(k){
 function killKillerPuuid(k){
   return k.killer_puuid || k.killer?.puuid || (typeof k.killer === 'string' ? k.killer : null);
 }
+function killVictimPuuid(k){
+  return k.victim_puuid || k.victim?.puuid || (typeof k.victim === 'string' ? k.victim : null);
+}
+function playerEconomy(p){
+  const e = p.economy || {};
+  const spent = e.spent?.overall ?? e.spent?.average ?? e.spent_overall ?? null;
+  const loadoutAvg = e.loadout_value?.average ?? e.loadout_average ?? e.loadout_value?.overall ?? null;
+  return { spent, loadoutAvg };
+}
+/**
+ * Estimates "entry" kills/deaths — who got the first elimination of each round.
+ * There's no explicit round number on a kill event, but kill_time_in_round resets
+ * to a small value at the start of every round, so a drop compared to the previous
+ * kill (sorted by match time) reliably marks a new round starting.
+ */
+function estimateEntries(match, puuid){
+  const kills = matchKillEvents(match)
+    .filter(k=> k.kill_time_in_round != null && k.kill_time_in_match != null)
+    .slice()
+    .sort((a,b)=> a.kill_time_in_match - b.kill_time_in_match);
+  let lastRt = Infinity, entryKills = 0, entryDeaths = 0;
+  kills.forEach(k=>{
+    const rt = k.kill_time_in_round;
+    if(rt < lastRt){
+      if(killKillerPuuid(k) === puuid) entryKills++;
+      if(killVictimPuuid(k) === puuid) entryDeaths++;
+    }
+    lastRt = rt;
+  });
+  return { entryKills, entryDeaths, hasData: kills.length>0 };
+}
 
 function aggregate(matches, puuid){
   const maps = {}, agents = {}, weapons = {};
   let totalGames = 0;
   let totalKillEvents = 0;
+  let sumLoadoutAvg = 0, loadoutSamples = 0, sumSpent = 0, spentSamples = 0;
+  let entryKills = 0, entryDeaths = 0, entrySamples = 0;
   const form = []; // most recent first: {win, map, agent}
 
   matches.forEach(match=>{
@@ -869,6 +1032,13 @@ function aggregate(matches, puuid){
       totalKillEvents++;
     });
 
+    const eco = playerEconomy(me);
+    if(eco.loadoutAvg != null){ sumLoadoutAvg += eco.loadoutAvg; loadoutSamples++; }
+    if(eco.spent != null){ sumSpent += eco.spent; spentSamples++; }
+
+    const entries = estimateEntries(match, puuid);
+    if(entries.hasData){ entryKills += entries.entryKills; entryDeaths += entries.entryDeaths; entrySamples++; }
+
     if(!maps[mapName]) maps[mapName] = { games:0, wins:0, kills:0, deaths:0, assists:0, acs:0, hs:0, adr:0 };
     Object.assign(maps[mapName], {
       games: maps[mapName].games+1,
@@ -897,7 +1067,18 @@ function aggregate(matches, puuid){
     bm[mapName].games++; if(won) bm[mapName].wins++;
   });
 
-  return { maps, agents, weapons, totalGames, totalKillEvents, form };
+  return {
+    maps, agents, weapons, totalGames, totalKillEvents, form,
+    economy: {
+      avgLoadout: loadoutSamples ? sumLoadoutAvg/loadoutSamples : null,
+      avgSpent: spentSamples ? sumSpent/spentSamples : null,
+      hasData: loadoutSamples>0 || spentSamples>0,
+    },
+    entries: {
+      kills: entryKills, deaths: entryDeaths, samples: entrySamples,
+      hasData: entrySamples>0,
+    },
+  };
 }
 
 
@@ -939,8 +1120,9 @@ function renderOverview(state){
   const rr = cur.rr ?? cur.ranking_in_tier;
   document.getElementById('pfRankRR').textContent = (rr!=null) ? `${rr} RR` : '';
   const rankIcon = document.getElementById('pfRankIcon');
-  const rankImg = cur.images?.small || cur.images?.large;
-  if(rankImg) rankIcon.style.backgroundImage = `url(${rankImg})`;
+  const rankImg = rankIconUrl(cur.tier?.id ?? cur.currenttier) || cur.images?.small || cur.images?.large;
+  rankIcon.style.backgroundImage = rankImg ? `url(${rankImg})` : '';
+  rankIcon.textContent = rankImg ? '' : '🎖️';
   document.getElementById('pfPeak').textContent = peak.tier?.name || peak.patched_tier || '—';
 
   const wins = agg.form.filter(f=>f.win===true).length;
@@ -951,6 +1133,11 @@ function renderOverview(state){
   Object.values(agg.maps).forEach(m=>{ sumK+=m.kills; sumD+=m.deaths; sumA+=m.assists; sumHS+=m.hs*m.games; });
   document.getElementById('pfKDA').textContent = agg.totalGames ? `${(sumK/total).toFixed(1)}/${(sumD/total).toFixed(1)}/${(sumA/total).toFixed(1)}` : '—';
   document.getElementById('pfHS').textContent = agg.totalGames ? `${(sumHS/total).toFixed(0)}%` : '—';
+
+  document.getElementById('pfLoadout').textContent = agg.economy.hasData && agg.economy.avgLoadout!=null ? `${Math.round(agg.economy.avgLoadout)} кр` : '—';
+  document.getElementById('pfSpent').textContent = agg.economy.hasData && agg.economy.avgSpent!=null ? `${Math.round(agg.economy.avgSpent)} кр` : '—';
+  document.getElementById('pfEntryK').textContent = agg.entries.hasData ? `${agg.entries.kills} за ${agg.entries.samples} матчей` : '—';
+  document.getElementById('pfEntryD').textContent = agg.entries.hasData ? `${agg.entries.deaths} за ${agg.entries.samples} матчей` : '—';
 
   // form pips
   const pipsWrap = document.getElementById('formPips');
@@ -979,7 +1166,7 @@ function renderMiniWeaponsTable(containerId, dict, totalKills){
     const img = WEAPONS[name]?.icon;
     container.appendChild(el(`
       <div class="meta-row">
-        <div class="meta-avatar">${img?`<img src="${img}" alt="${name}">`:'🔫'}</div>
+        <div class="meta-avatar weapon">${img?`<img src="${img}" alt="${name}">`:'🔫'}</div>
         <div class="meta-name">${name}<div class="meta-sub">${o.kills} убийств</div></div>
         <div class="meta-bar-wrap"><div class="meta-bar"><div class="meta-bar-fill" style="width:${pct}%;"></div></div></div>
         <div class="meta-col wr">${pct}%</div>
@@ -1152,7 +1339,7 @@ function renderWeaponsTable(agg){
     const img = WEAPONS[name]?.icon;
     container.appendChild(el(`
       <div class="meta-row">
-        <div class="meta-avatar">${img?`<img src="${img}" alt="${name}">`:'🔫'}</div>
+        <div class="meta-avatar weapon">${img?`<img src="${img}" alt="${name}">`:'🔫'}</div>
         <div class="meta-name">${name}</div>
         <div class="meta-col" style="flex:1;">${o.kills}</div>
         <div class="meta-bar-wrap" style="flex:2;"><div class="meta-bar"><div class="meta-bar-fill" style="width:${pct}%;"></div></div></div>
@@ -1161,6 +1348,106 @@ function renderWeaponsTable(agg){
     `));
   });
 }
+
+/* ---------- rank history: seasonal summary (free, from mmr already fetched) ---------- */
+function seasonSortKey(short){
+  const m = /^e(\d+)a(\d+)/.exec(short||'');
+  return m ? (parseInt(m[1],10)*10 + parseInt(m[2],10)) : 0;
+}
+function renderSeasonalTable(mmr){
+  const container = document.getElementById('seasonalTable');
+  if(!container) return;
+  const seasonal = mmr?.seasonal;
+  if(!Array.isArray(seasonal) || !seasonal.length){
+    container.innerHTML = '<div class="empty-state">нет данных по актам — нужны ранговые матчи в этом сезоне</div>';
+    return;
+  }
+  const rows = seasonal.slice().sort((a,b)=> seasonSortKey(a.season?.short) - seasonSortKey(b.season?.short));
+  container.innerHTML = '';
+  container.appendChild(el(`
+    <div class="meta-head-row">
+      <div style="flex:2;">Акт</div>
+      <div class="meta-col" style="flex:1;">Матчи</div>
+      <div class="meta-col wr" style="flex:1;">Винрейт</div>
+      <div class="meta-col" style="flex:2;">Ранг на конце акта</div>
+    </div>
+  `));
+  rows.forEach(s=>{
+    const tierId = s.end_tier?.id;
+    const img = rankIconUrl(tierId);
+    const wr = s.games ? (s.wins/s.games*100).toFixed(0) : '0';
+    const seasonName = SEASONS[s.season?.id] || s.season?.short || '—';
+    container.appendChild(el(`
+      <div class="meta-row">
+        <div class="meta-avatar">${img?`<img src="${img}" alt="">`:'🏅'}</div>
+        <div class="meta-name">${seasonName}</div>
+        <div class="meta-col" style="flex:1;">${s.games||0}</div>
+        <div class="meta-col wr" style="flex:1;">${wr}%</div>
+        <div class="meta-col" style="flex:2;text-align:left;">${s.end_tier?.name||'—'}</div>
+      </div>
+    `));
+  });
+}
+
+/* ---------- rank history: RR-per-match chart (lazy, on-demand call) ---------- */
+async function fetchMMRHistory(cfg){
+  const [name, tag] = cfg.riotId.split('#');
+  const json = await api(`/valorant/v2/mmr-history/${cfg.region}/pc/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`, cfg.apiKey);
+  return json.data || [];
+}
+function renderRRChartSVG(history){
+  const host = document.getElementById('rrChartHost');
+  if(!history.length){ host.innerHTML = '<div class="empty-state">нет данных о рейтинговых матчах</div>'; return; }
+  // oldest -> newest, left to right
+  const points = history.slice().reverse();
+  const elos = points.map(p=> p.elo ?? (p.ranking_in_tier ?? 0));
+  const min = Math.min(...elos), max = Math.max(...elos);
+  const range = (max-min) || 1;
+  const W = 100, H = 34;
+  const coords = points.map((p,i)=>{
+    const x = points.length>1 ? (i/(points.length-1))*W : 0;
+    const y = H - ((elos[i]-min)/range)*H;
+    return { x, y, p };
+  });
+  const path = coords.map((c,i)=> `${i===0?'M':'L'}${c.x.toFixed(2)},${c.y.toFixed(2)}`).join(' ');
+  const areaPath = `${path} L${W},${H} L0,${H} Z`;
+  const dots = coords.map(c=>{
+    const win = (c.p.mmr_change_to_last_game ?? c.p.last_change ?? 0) >= 0;
+    return `<circle cx="${c.x.toFixed(2)}" cy="${c.y.toFixed(2)}" r="0.9" fill="${win?'var(--win)':'var(--loss)'}"><title>${c.p.currenttier_patched||c.p.tier?.name||''} · ${c.p.date||''}</title></circle>`;
+  }).join('');
+  host.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:180px;overflow:visible;" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="rrFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${areaPath}" fill="url(#rrFill)" stroke="none"/>
+      <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="0.6" vector-effect="non-scaling-stroke"/>
+      ${dots}
+    </svg>
+    <div class="settings-row-desc" style="margin-top:8px;">точки — отдельные рейтинговые матчи (зелёная — рост, красная — падение), последний матч справа. Наведи на точку, чтобы увидеть ранг и дату.</div>
+  `;
+}
+document.getElementById('loadRRHistoryBtn').addEventListener('click', async ()=>{
+  const cfg = loadCfg();
+  if(!cfg.riotId || !cfg.apiKey){ alert('Сначала подключи аккаунт в Настройках.'); return; }
+  const btn = document.getElementById('loadRRHistoryBtn');
+  const host = document.getElementById('rrChartHost');
+  btn.disabled = true; btn.textContent = 'загружаю...';
+  host.innerHTML = '';
+  try{
+    const history = await fetchMMRHistory(cfg);
+    renderRRChartSVG(history);
+    btn.textContent = 'Обновить график';
+  }catch(err){
+    host.innerHTML = `<div class="empty-state">ошибка: ${err.message}</div>`;
+    btn.textContent = 'Загрузить график RR';
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 function populateMatchFilters(allMatches, puuid){
   const agentSel = document.getElementById('matchAgentFilter');
@@ -1443,9 +1730,10 @@ async function refreshAll(userInitiated){
       fetchMatches(cfg, (loaded, target)=>{ if(userInitiated) statusEl.textContent = `загружаю... ${loaded}/${target} матчей`; }).catch(()=>[]),
     ]);
     const agg = aggregate(matches, account.puuid);
-    CURRENT_STATE = { account, mmr, agg, matches };
+    CURRENT_STATE = { account, mmr, agg, matches, fetchedAt: Date.now() };
     saveCache(CURRENT_STATE);
     renderAllViews();
+    updateRefreshUI();
     statusEl.textContent = `подключено ✓ (загружено ${matches.length} матчей)`;
     refreshBtn.style.display = '';
     setSidebarStatus(true, `${account.name}#${account.tag}`);
@@ -1469,6 +1757,7 @@ function renderAllViews(){
   renderMapsTable(CURRENT_STATE.agg);
   renderAgentsTable(CURRENT_STATE.agg);
   renderWeaponsTable(CURRENT_STATE.agg);
+  renderSeasonalTable(CURRENT_STATE.mmr);
   renderMatches(filtered, puuid);
   const activeBtn = document.querySelector('.side-item.active[data-view]');
   const activeView = activeBtn ? activeBtn.dataset.view : 'overview';
@@ -1525,14 +1814,53 @@ function initSettingsForm(){
     saveCfg({riotId, region, apiKey, size});
     await refreshAll(true);
   });
-  document.getElementById('refreshBtn').addEventListener('click', ()=>{
-    const riotId = document.getElementById('cfgRiotId').value.trim();
-    const region = document.getElementById('cfgRegion').value;
-    const apiKey = document.getElementById('cfgApiKey').value.trim();
-    const size = parseInt(document.getElementById('cfgSize').value, 10);
-    saveCfg({riotId, region, apiKey, size});
-    refreshAll(true);
+/* ---------- manual refresh w/ cooldown, to protect the 30 req/min API key limit ---------- */
+const REFRESH_COOLDOWN_MS = 45000;
+const LAST_REFRESH_KEY = 'valostats:lastRefreshTs';
+function formatAgo(ts){
+  if(!ts) return '—';
+  const diff = Date.now() - ts;
+  if(diff < 20000) return 'только что';
+  if(diff < 60000) return `${Math.floor(diff/1000)} с назад`;
+  if(diff < 3600000) return `${Math.floor(diff/60000)} мин назад`;
+  if(diff < 86400000) return `${Math.floor(diff/3600000)} ч назад`;
+  return `${Math.floor(diff/86400000)} дн назад`;
+}
+function updateRefreshUI(){
+  const has = !!(CURRENT_STATE && CURRENT_STATE.account);
+  document.getElementById('sbRefreshWrap').style.display = has ? '' : 'none';
+  document.getElementById('mobileRefreshWrap').style.display = has ? '' : 'none';
+  if(!has) return;
+  const agoText = formatAgo(CURRENT_STATE.fetchedAt);
+  document.getElementById('sbLastUpdated').textContent = agoText;
+  document.getElementById('mobileLastUpdated').textContent = agoText;
+  const lastRefresh = parseInt(localStorage.getItem(LAST_REFRESH_KEY)||'0', 10);
+  const remain = REFRESH_COOLDOWN_MS - (Date.now() - lastRefresh);
+  [document.getElementById('sbRefreshBtn'), document.getElementById('mobileRefreshBtn')].forEach(btn=>{
+    if(!btn) return;
+    if(remain > 0){ btn.disabled = true; btn.title = `подожди ${Math.ceil(remain/1000)}с — бережём лимит запросов ключа`; }
+    else { btn.disabled = false; btn.title = 'Обновить статистику'; }
   });
+}
+setInterval(updateRefreshUI, 5000);
+
+async function manualRefresh(){
+  const lastRefresh = parseInt(localStorage.getItem(LAST_REFRESH_KEY)||'0', 10);
+  if(Date.now() - lastRefresh < REFRESH_COOLDOWN_MS){ updateRefreshUI(); return; }
+  const riotId = document.getElementById('cfgRiotId').value.trim();
+  const region = document.getElementById('cfgRegion').value;
+  const apiKey = document.getElementById('cfgApiKey').value.trim();
+  const size = parseInt(document.getElementById('cfgSize').value, 10);
+  saveCfg({riotId, region, apiKey, size});
+  localStorage.setItem(LAST_REFRESH_KEY, String(Date.now()));
+  [document.getElementById('sbRefreshBtn'), document.getElementById('mobileRefreshBtn')].forEach(b=> b && b.classList.add('spinning'));
+  await refreshAll(true);
+  [document.getElementById('sbRefreshBtn'), document.getElementById('mobileRefreshBtn')].forEach(b=> b && b.classList.remove('spinning'));
+  updateRefreshUI();
+}
+document.getElementById('refreshBtn').addEventListener('click', manualRefresh);
+document.getElementById('sbRefreshBtn').addEventListener('click', manualRefresh);
+document.getElementById('mobileRefreshBtn').addEventListener('click', manualRefresh);
 }
 
 /* ---------- player search (any Riot ID, uses saved API key) ---------- */
@@ -1553,7 +1881,7 @@ function renderSearchResult(bundle){
   const cur = mmr?.current || mmr?.current_data || {};
   const peak = mmr?.peak || mmr?.highest_rank || {};
   const cardArt = accountCardUrl(account);
-  const rankImg = cur.images?.small || cur.images?.large;
+  const rankImg = rankIconUrl(cur.tier?.id ?? cur.currenttier) || cur.images?.small || cur.images?.large;
   const wins = agg.form.filter(f=>f.win===true).length;
   const total = agg.totalGames || 1;
 
@@ -1691,7 +2019,249 @@ document.getElementById('searchBtn').addEventListener('click', ()=>{
 });
 renderSearchHistory();
 
-/* ---------- boot ---------- */
+/* ---------- compare two players ---------- */
+function summarizeAgg(agg){
+  const total = agg.totalGames || 0;
+  let sumK=0,sumD=0,sumA=0,sumHS=0,sumACS=0,sumADR=0;
+  Object.values(agg.maps).forEach(m=>{ sumK+=m.kills; sumD+=m.deaths; sumA+=m.assists; sumHS+=m.hs*m.games; sumACS+=m.acs*m.games; sumADR+=m.adr*m.games; });
+  const wins = agg.form.filter(f=>f.win===true).length;
+  const topAgent = Object.entries(agg.agents).sort((a,b)=>b[1].games-a[1].games)[0];
+  const topMap = Object.entries(agg.maps).sort((a,b)=>b[1].games-a[1].games)[0];
+  const topWeapon = Object.entries(agg.weapons).sort((a,b)=>b[1].kills-a[1].kills)[0];
+  return {
+    games: total,
+    winrate: total ? wins/total*100 : 0,
+    kills: sumK, deaths: sumD, assists: sumA,
+    kd: sumD ? sumK/sumD : sumK,
+    acs: total ? sumACS/total : 0,
+    adr: total ? sumADR/total : 0,
+    hs: total ? sumHS/total : 0,
+    topAgent: topAgent ? topAgent[0] : '—',
+    topMap: topMap ? topMap[0] : '—',
+    topWeapon: topWeapon ? topWeapon[0] : '—',
+  };
+}
+function cmpRow(label, a, b, fmt, higherBetter=true){
+  fmt = fmt || (v=>v);
+  const betterA = higherBetter ? a>b : a<b;
+  const betterB = higherBetter ? b>a : b<a;
+  return `
+    <div class="cmp-row">
+      <div class="cmp-val ${a!==b && betterA?'better':''}">${fmt(a)}</div>
+      <div class="cmp-label">${label}</div>
+      <div class="cmp-val ${a!==b && betterB?'better':''}">${fmt(b)}</div>
+    </div>`;
+}
+function renderCompare(bundleA, bundleB){
+  const wrap = document.getElementById('cmpResults');
+  const sA = summarizeAgg(bundleA.agg), sB = summarizeAgg(bundleB.agg);
+  const curA = bundleA.mmr?.current || bundleA.mmr?.current_data || {};
+  const curB = bundleB.mmr?.current || bundleB.mmr?.current_data || {};
+  const rankImgA = rankIconUrl(curA.tier?.id ?? curA.currenttier);
+  const rankImgB = rankIconUrl(curB.tier?.id ?? curB.currenttier);
+  const cardA = accountCardUrl(bundleA.account), cardB = accountCardUrl(bundleB.account);
+
+  wrap.innerHTML = `
+    <div class="cmp-heads">
+      <div class="cmp-head">
+        <div class="cmp-avatar" style="${cardA?`background-image:url(${cardA});`:''}"></div>
+        <div class="cmp-name">${bundleA.account.name}<span class="profile-tag">#${bundleA.account.tag}</span></div>
+        <div class="cmp-rank">${rankImgA?`<img src="${rankImgA}">`:''} ${curA.tier?.name||curA.currenttierpatched||'Без ранга'}</div>
+      </div>
+      <div class="cmp-vs">VS</div>
+      <div class="cmp-head">
+        <div class="cmp-avatar" style="${cardB?`background-image:url(${cardB});`:''}"></div>
+        <div class="cmp-name">${bundleB.account.name}<span class="profile-tag">#${bundleB.account.tag}</span></div>
+        <div class="cmp-rank">${rankImgB?`<img src="${rankImgB}">`:''} ${curB.tier?.name||curB.currenttierpatched||'Без ранга'}</div>
+      </div>
+    </div>
+    <div class="cmp-table">
+      ${cmpRow('Матчей загружено', sA.games, sB.games, v=>v)}
+      ${cmpRow('Винрейт', sA.winrate, sB.winrate, v=>v.toFixed(0)+'%')}
+      ${cmpRow('K/D', sA.kd, sB.kd, v=>v.toFixed(2))}
+      ${cmpRow('ACS', sA.acs, sB.acs, v=>v.toFixed(0))}
+      ${cmpRow('ADR', sA.adr, sB.adr, v=>v.toFixed(0))}
+      ${cmpRow('HS%', sA.hs, sB.hs, v=>v.toFixed(0)+'%')}
+      ${cmpRow('Любимый агент', sA.topAgent, sB.topAgent, v=>v, null)}
+      ${cmpRow('Любимая карта', sA.topMap, sB.topMap, v=>v, null)}
+      ${cmpRow('Любимое оружие', sA.topWeapon, sB.topWeapon, v=>v, null)}
+    </div>
+  `;
+  // text-only rows (agent/map/weapon) shouldn't get a numeric "better" highlight
+  wrap.querySelectorAll('.cmp-row').forEach(row=>{
+    const label = row.querySelector('.cmp-label').textContent;
+    if(['Любимый агент','Любимая карта','Любимое оружие'].includes(label)){
+      row.querySelectorAll('.cmp-val').forEach(v=>v.classList.remove('better'));
+    }
+  });
+}
+document.getElementById('cmpBtn').addEventListener('click', async ()=>{
+  const riotIdA = document.getElementById('cmpRiotIdA').value.trim();
+  const regionA = document.getElementById('cmpRegionA').value;
+  const riotIdB = document.getElementById('cmpRiotIdB').value.trim();
+  const regionB = document.getElementById('cmpRegionB').value;
+  const cfg = loadCfg();
+  const wrap = document.getElementById('cmpResults');
+  if(!riotIdA.includes('#') || !riotIdB.includes('#')){ wrap.innerHTML = '<div class="empty-state">укажи оба Riot ID в формате Имя#Тег</div>'; return; }
+  if(!cfg.apiKey){ wrap.innerHTML = '<div class="empty-state">сначала укажи API-ключ HenrikDev в Настройках</div>'; return; }
+  wrap.innerHTML = '<div class="empty-state"><span class="spinner" style="margin:0 auto 10px;display:inline-block;"></span><br>сравниваю...</div>';
+  try{
+    const [bundleA, bundleB] = await Promise.all([
+      fetchProfileBundle(riotIdA, regionA, cfg.apiKey, 30),
+      fetchProfileBundle(riotIdB, regionB, cfg.apiKey, 30),
+    ]);
+    renderCompare(bundleA, bundleB);
+  }catch(err){
+    wrap.innerHTML = `<div class="empty-state">ошибка: ${err.message}</div>`;
+  }
+});
+(function prefillCompareA(){
+  const cfg = loadCfg();
+  if(cfg.riotId){ document.getElementById('cmpRiotIdA').value = cfg.riotId; document.getElementById('cmpRegionA').value = cfg.region || 'eu'; }
+})();
+
+/* ---------- export stats as a shareable PNG ---------- */
+function loadImageSafe(url){
+  return new Promise(resolve=>{
+    if(!url){ resolve(null); return; }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=> resolve(img);
+    img.onerror = ()=> resolve(null);
+    img.src = url;
+    setTimeout(()=> resolve(null), 6000);
+  });
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+async function exportStatsImage(){
+  const btn = document.getElementById('exportPngBtn');
+  const original = btn.textContent;
+  btn.textContent = 'рисую...'; btn.disabled = true;
+  try{
+    const { account, mmr, agg } = CURRENT_STATE;
+    if(!account){ alert('Сначала подключи аккаунт.'); return; }
+    const s = summarizeAgg(agg);
+    const cur = mmr?.current || mmr?.current_data || {};
+    const cardUrl = accountCardUrl(account);
+    const rankUrl = rankIconUrl(cur.tier?.id ?? cur.currenttier);
+    const agentUrl = AGENTS[s.topAgent]?.icon;
+    const mapUrl = MAPS[s.topMap]?.icon;
+
+    const W=960, H=560;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // background
+    const grad = ctx.createLinearGradient(0,0,W,H);
+    grad.addColorStop(0,'#120a0e'); grad.addColorStop(1,'#1c0f14');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+
+    const [cardImg, rankImg, agentImg, mapImg] = await Promise.all([
+      loadImageSafe(cardUrl), loadImageSafe(rankUrl), loadImageSafe(agentUrl), loadImageSafe(mapUrl)
+    ]);
+
+    if(mapImg){
+      ctx.save();
+      ctx.globalAlpha = 0.16;
+      ctx.drawImage(mapImg, 0, 0, W, H);
+      ctx.restore();
+    }
+
+    // header
+    ctx.fillStyle = '#ff4655';
+    ctx.font = '700 15px Arial';
+    ctx.fillText('VALOSTATS', 48, 56);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '400 13px Arial';
+    ctx.fillText(new Date().toLocaleDateString('ru-RU'), W-150, 56);
+
+    if(cardImg){
+      roundRect(ctx, 48, 84, 96, 96, 16);
+      ctx.save(); ctx.clip();
+      ctx.drawImage(cardImg, 48, 84, 96, 96);
+      ctx.restore();
+    }
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 30px Arial';
+    ctx.fillText(`${account.name}`, 162, 122);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '400 18px Arial';
+    ctx.fillText(`#${account.tag}`, 162 + ctx.measureText(account.name).width + 8, 122);
+
+    if(rankImg){ ctx.drawImage(rankImg, 162, 138, 32, 32); }
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = '600 15px Arial';
+    ctx.fillText(cur.tier?.name || cur.currenttierpatched || 'Без ранга', rankImg?202:162, 160);
+
+    // stat grid
+    const stats = [
+      ['МАТЧЕЙ', s.games],
+      ['ВИНРЕЙТ', s.winrate.toFixed(0)+'%'],
+      ['K/D', s.kd.toFixed(2)],
+      ['ACS', s.acs.toFixed(0)],
+      ['ADR', s.adr.toFixed(0)],
+      ['HS%', s.hs.toFixed(0)+'%'],
+    ];
+    const gx = 48, gy = 220, gw = (W-96)/3, gh = 90;
+    stats.forEach((st,i)=>{
+      const col = i%3, row = Math.floor(i/3);
+      const x = gx + col*gw, y = gy + row*gh;
+      roundRect(ctx, x, y, gw-14, gh-14, 12);
+      ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.font = '600 12px Arial';
+      ctx.fillText(st[0], x+18, y+30);
+      ctx.fillStyle = '#ff4655';
+      ctx.font = '700 28px Arial';
+      ctx.fillText(String(st[1]), x+18, y+64);
+    });
+
+    // favorites row
+    const favY = gy + 2*gh + 24;
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.font = '600 12px Arial';
+    ctx.fillText('ЛЮБИМЫЙ АГЕНТ', 48, favY);
+    ctx.fillText('ЛЮБИМАЯ КАРТА', 340, favY);
+    ctx.fillText('ЛЮБИМОЕ ОРУЖИЕ', 632, favY);
+    if(agentImg) ctx.drawImage(agentImg, 48, favY+14, 40, 40);
+    if(mapImg) ctx.drawImage(mapImg, 340, favY+14, 40, 40);
+    ctx.fillStyle = '#fff';
+    ctx.font = '600 17px Arial';
+    ctx.fillText(s.topAgent, agentImg?98:48, favY+40);
+    ctx.fillText(s.topMap, mapImg?390:340, favY+40);
+    ctx.fillText(s.topWeapon, 632, favY+40);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '400 12px Arial';
+    ctx.fillText('сгенерировано в ValoStats · данные HenrikDev API', 48, H-32);
+
+    let dataUrl;
+    try{
+      dataUrl = canvas.toDataURL('image/png');
+    }catch(secErr){
+      alert('Не получилось собрать картинку — часть иконок с сервера блокирует экспорт (CORS). Попробуй ещё раз чуть позже.');
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `valostats-${account.name}-${account.tag}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+  } finally {
+    btn.textContent = original; btn.disabled = false;
+  }
+}
+document.getElementById('exportPngBtn').addEventListener('click', exportStatsImage);
+
+
 (async function init(){
   initSettingsForm();
   await Promise.all([loadGameData(), loadSeasons()]);
@@ -1699,10 +2269,15 @@ renderSearchHistory();
   if(cached){ CURRENT_STATE = cached; renderAllViews(); }
   const cfg = loadCfg();
   if(cfg.riotId && cfg.apiKey){
-    setSidebarStatus(!!cached, cached ? `${cached.account?.name}#${cached.account?.tag}` : 'обновляю...');
+    setSidebarStatus(true, cached ? `${cached.account?.name}#${cached.account?.tag}` : 'подключаюсь...');
     document.getElementById('refreshBtn').style.display = '';
-    document.getElementById('cfgStatus').textContent = cached ? 'сохранено — обновляю в фоне...' : 'подключаюсь...';
-    refreshAll(false);
+    updateRefreshUI();
+    if(cached){
+      document.getElementById('cfgStatus').textContent = `подключено ✓ (загружено ${cached.matches?.length||0} матчей) — обновлено ${formatAgo(cached.fetchedAt)}`;
+    } else {
+      document.getElementById('cfgStatus').textContent = 'подключаюсь...';
+      refreshAll(false); // first-ever load with no local cache — one automatic fetch is needed to show anything at all
+    }
   } else {
     switchView('settings');
     setSidebarStatus(false, 'не подключено');
